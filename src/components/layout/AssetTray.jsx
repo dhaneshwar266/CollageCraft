@@ -45,7 +45,7 @@ export default function AssetTray({
 
   return (
     <div
-      className={`border-t border-stone-200/80 bg-white/95 backdrop-blur-md transition-all duration-300 z-20 flex flex-col shrink-0 mb-[calc(3rem+env(safe-area-inset-bottom,0px))] md:mb-0 ${
+      className={`border-t border-stone-200/80 bg-white/95 backdrop-blur-md transition-all duration-300 z-20 flex flex-col shrink-0 mb-0 ${
         isCollapsed ? 'h-9 md:h-10' : 'h-24 md:h-32 sm:h-36'
       }`}
     >
