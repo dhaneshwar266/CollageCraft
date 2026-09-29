@@ -45,12 +45,12 @@ export default function AssetTray({
 
   return (
     <div
-      className={`border-t border-stone-200/80 bg-white/95 backdrop-blur-md transition-all duration-300 z-20 flex flex-col shrink-0 mb-12 md:mb-0 ${
-        isCollapsed ? 'h-10' : 'h-32 sm:h-36'
+      className={`border-t border-stone-200/80 bg-white/95 backdrop-blur-md transition-all duration-300 z-20 flex flex-col shrink-0 mb-[calc(3rem+env(safe-area-inset-bottom,0px))] md:mb-0 ${
+        isCollapsed ? 'h-9 md:h-10' : 'h-24 md:h-32 sm:h-36'
       }`}
     >
       {/* Tray Header & Controls */}
-      <div className="h-10 px-2 sm:px-4 border-b border-stone-200/60 flex items-center justify-between bg-stone-50/80 select-none">
+      <div className="h-9 md:h-10 px-2 sm:px-4 border-b border-stone-200/60 flex items-center justify-between bg-stone-50/80 select-none shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -93,7 +93,7 @@ export default function AssetTray({
 
       {/* Thumbnails Row */}
       {!isCollapsed && (
-        <div className="flex-1 p-3 overflow-x-auto flex items-center gap-3 no-scrollbar">
+        <div className="flex-1 p-1.5 md:p-3 overflow-x-auto flex items-center gap-2 md:gap-3 no-scrollbar min-h-0">
           {assets.map((asset, index) => (
             <div
               key={asset.id}
@@ -102,7 +102,7 @@ export default function AssetTray({
                 e.dataTransfer.setData('text/plain', asset.id);
                 e.dataTransfer.setData('application/json', JSON.stringify({ assetId: asset.id }));
               }}
-              className="h-24 w-24 shrink-0 rounded-xl bg-stone-100 border border-stone-200 relative group overflow-hidden shadow-xs cursor-grab active:cursor-grabbing hover:border-[#c25e40] transition-all"
+              className="h-14 w-14 md:h-24 md:w-24 shrink-0 rounded-xl bg-stone-100 border border-stone-200 relative group overflow-hidden shadow-xs cursor-grab active:cursor-grabbing hover:border-[#c25e40] transition-all"
             >
               <img
                 src={asset.url}
@@ -143,10 +143,10 @@ export default function AssetTray({
           {/* Add Dropzone Tile */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="h-24 w-28 shrink-0 rounded-xl border-2 border-dashed border-stone-300 hover:border-[#c25e40] bg-stone-50 hover:bg-amber-50/50 transition-all flex flex-col items-center justify-center gap-1 text-stone-500 hover:text-[#c25e40] group"
+            className="h-14 w-16 md:h-24 md:w-28 shrink-0 rounded-xl border-2 border-dashed border-stone-300 hover:border-[#c25e40] bg-stone-50 hover:bg-amber-50/50 transition-all flex flex-col items-center justify-center gap-0.5 md:gap-1 text-stone-500 hover:text-[#c25e40] group"
           >
-            <ImagePlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
-            <span className="text-[11px] font-medium">Add Photo</span>
+            <ImagePlus className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
+            <span className="text-[10px] md:text-[11px] font-medium">Add Photo</span>
           </button>
         </div>
       )}
