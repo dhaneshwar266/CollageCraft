@@ -139,8 +139,8 @@ export default function WorkspaceCanvas({
 
   // Reliable contain-style canvas sizing calculation based on available workspace
   const canvasDimensions = React.useMemo(() => {
-    // Leave 16px breathing room on narrow mobile screens, 32px on larger screens
-    const margin = (workspaceBounds.width < 640) ? 16 : 32;
+    // Leave 12px breathing room on narrow mobile screens (<768px), 32px on larger screens
+    const margin = (workspaceBounds.width < 768) ? 12 : 32;
     const availW = Math.max(120, (workspaceBounds.width || 800) - margin);
     const availH = Math.max(120, (workspaceBounds.height || 600) - margin);
     const ratio = targetRatio || 1;
