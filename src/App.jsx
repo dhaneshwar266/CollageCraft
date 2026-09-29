@@ -210,8 +210,8 @@ export default function App() {
         onImportProjectFile={importProjectFile}
       />
 
-      {/* Main Studio Body: Sidebar + Central Workspace */}
-      <div className="flex-1 flex w-full max-w-full min-w-0 overflow-hidden relative box-border">
+      {/* Main Studio Body: On Desktop side-by-side (Sidebar left, Workspace right). On Mobile vertical column (Workspace top, AssetTray middle, Sidebar mobile dock bottom) */}
+      <div className="flex-1 flex flex-col md:flex-row w-full max-w-full min-w-0 overflow-hidden relative box-border min-h-0">
         <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -284,15 +284,27 @@ export default function App() {
           onRemoveGuide={removeGuide}
           onClearAllGuides={clearAllGuides}
         />
+
+        {/* Mobile Asset Tray (Inside main flex column directly below WorkspaceCanvas) */}
+        <div className="md:hidden shrink-0">
+          <AssetTray
+            assets={state.assets}
+            onAddAsset={addAsset}
+            onRemoveAsset={removeAsset}
+            onLoadSamplePhotos={loadSamplePhotos}
+          />
+        </div>
       </div>
 
-      {/* Bottom Asset Tray */}
-      <AssetTray
-        assets={state.assets}
-        onAddAsset={addAsset}
-        onRemoveAsset={removeAsset}
-        onLoadSamplePhotos={loadSamplePhotos}
-      />
+      {/* Desktop Asset Tray (Hidden on mobile) */}
+      <div className="hidden md:block shrink-0">
+        <AssetTray
+          assets={state.assets}
+          onAddAsset={addAsset}
+          onRemoveAsset={removeAsset}
+          onLoadSamplePhotos={loadSamplePhotos}
+        />
+      </div>
 
       {/* High-Resolution Export Modal */}
       <ExportModal
