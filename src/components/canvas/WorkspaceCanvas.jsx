@@ -139,8 +139,9 @@ export default function WorkspaceCanvas({
 
   // Reliable contain-style canvas sizing calculation based on available workspace
   const canvasDimensions = React.useMemo(() => {
+    const isMobile = (workspaceBounds.width < 768);
     // Leave 12px breathing room on narrow mobile screens (<768px), 32px on larger screens
-    const margin = (workspaceBounds.width < 768) ? 12 : 32;
+    const margin = isMobile ? 12 : 32;
     const availW = Math.max(120, (workspaceBounds.width || 800) - margin);
     const availH = Math.max(120, (workspaceBounds.height || 600) - margin);
     const ratio = targetRatio || 1;
@@ -153,6 +154,19 @@ export default function WorkspaceCanvas({
       w = availW;
       h = w / ratio;
     }
+
+    // On mobile (<768px), enforce strict contain-fit so height NEVER exceeds availH and width NEVER exceeds availW
+    if (isMobile) {
+      if (h > availH) {
+        h = availH;
+        w = h * ratio;
+      }
+      if (w > availW) {
+        w = availW;
+        h = w / ratio;
+      }
+    }
+
     w = Math.max(120, Math.round(w));
     h = Math.max(120, Math.round(h));
 
@@ -604,7 +618,7 @@ export default function WorkspaceCanvas({
       ref={mainRef}
       onMouseDown={handleMainMouseDown}
       onClick={handleCanvasClick}
-      className={`flex-1 w-full max-w-full min-w-0 h-full bg-[#f8fafc] relative flex items-center justify-center overflow-hidden select-none box-border ${
+      className={`flex-1 w-full max-w-full min-w-0 h-full bg-[#f8fafc] relative flex flex-col items-center justify-start md:justify-center pt-2 sm:pt-3 md:pt-0 overflow-hidden select-none box-border ${
         isSpacePressed ? (isPanningViewport ? 'cursor-grabbing' : 'cursor-grab') : ''
       }`}
     >
@@ -634,7 +648,7 @@ export default function WorkspaceCanvas({
       {/* VIEWPORT TRANSFORM CONTAINER (Workspace Scale 1.0 Locked) */}
       <div
         onClick={handleCanvasClick}
-        className="relative flex items-center justify-center w-full h-full overflow-hidden"
+        className="relative flex items-start md:items-center justify-center w-full h-full overflow-hidden"
         style={{
           transform: `translate(${viewport?.panX || 0}px, ${viewport?.panY || 0}px) scale(1)`,
           transformOrigin: 'center center',
