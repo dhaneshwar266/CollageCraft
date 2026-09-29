@@ -139,7 +139,9 @@ async function runTests() {
 
     // 10. Pointer-Events Overlay Inspection Test
     const fs = await import('fs');
-    const textOverlaySource = fs.readFileSync('/Users/arunrathore/Documents/1production/image collage/src/components/canvas/TextOverlayEditor.jsx', 'utf-8');
+    const path = await import('path');
+    const textOverlayPath = path.resolve(process.cwd(), 'src/components/canvas/TextOverlayEditor.jsx');
+    const textOverlaySource = fs.readFileSync(textOverlayPath, 'utf-8');
     assert(textOverlaySource.includes('className="absolute inset-0 pointer-events-none z-20 overflow-hidden"'), 'TextOverlayEditor container uses pointer-events-none to prevent blocking canvas pointer events');
 
     // 11. Image Cell Drag & Swap Logic Tests
