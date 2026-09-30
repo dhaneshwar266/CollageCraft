@@ -210,45 +210,52 @@ export default function App() {
         onImportProjectFile={importProjectFile}
       />
 
-      {/* Main Studio Body: On Desktop side-by-side (Sidebar left, Workspace right). On Mobile vertical column (Workspace top, AssetTray middle, Sidebar mobile dock bottom) */}
+      {/* Main Studio Body:
+          On Desktop (>=768px): flex-row with Sidebar left, WorkspaceCanvas right, Desktop AssetTray across bottom.
+          On Mobile (<=767px): flex-col with WorkspaceCanvas (top) -> AssetTray (middle) -> Sidebar Mobile Dock/Panel (bottom).
+      */}
       <div className="flex-1 flex flex-col md:flex-row w-full max-w-full min-w-0 overflow-hidden relative box-border min-h-0">
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          state={state}
-          setLayoutId={setLayoutId}
-          setAspectRatio={setAspectRatio}
-          updateFrameSettings={updateFrameSettings}
-          updateBackgroundSettings={updateBackgroundSettings}
-          addTextOverlay={addTextOverlay}
-          updateTextOverlay={updateTextOverlay}
-          removeTextOverlay={removeTextOverlay}
-          addSticker={addSticker}
-          removeSticker={removeSticker}
-          addShapeElement={addShapeElement}
-          selectedOverlayId={selectedOverlayId}
-          setSelectedOverlayId={setSelectedOverlayId}
-          document={docModel}
-          selection={selection}
-          setPrimarySelection={setPrimarySelection}
-          toggleSelection={toggleSelection}
-          toggleVisibility={toggleVisibility}
-          toggleLock={toggleLock}
-          renameElement={renameElement}
-          duplicateElement={duplicateElement}
-          removeElement={removeElement}
-          deleteSelectedElements={deleteSelectedElements}
-          duplicateSelectedElements={duplicateSelectedElements}
-          groupSelectedElements={groupSelectedElements}
-          ungroupSelectedElement={ungroupSelectedElement}
-          editingGroupId={editingGroupId}
-          setEditingGroupId={setEditingGroupId}
-          bringForward={bringForward}
-          sendBackward={sendBackward}
-          bringToFront={bringToFront}
-          sendToBack={sendToBack}
-        />
+        {/* Desktop Sidebar (Hidden on mobile) */}
+        <div className="hidden md:flex shrink-0">
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            state={state}
+            setLayoutId={setLayoutId}
+            setAspectRatio={setAspectRatio}
+            updateFrameSettings={updateFrameSettings}
+            updateBackgroundSettings={updateBackgroundSettings}
+            addTextOverlay={addTextOverlay}
+            updateTextOverlay={updateTextOverlay}
+            removeTextOverlay={removeTextOverlay}
+            addSticker={addSticker}
+            removeSticker={removeSticker}
+            addShapeElement={addShapeElement}
+            selectedOverlayId={selectedOverlayId}
+            setSelectedOverlayId={setSelectedOverlayId}
+            document={docModel}
+            selection={selection}
+            setPrimarySelection={setPrimarySelection}
+            toggleSelection={toggleSelection}
+            toggleVisibility={toggleVisibility}
+            toggleLock={toggleLock}
+            renameElement={renameElement}
+            duplicateElement={duplicateElement}
+            removeElement={removeElement}
+            deleteSelectedElements={deleteSelectedElements}
+            duplicateSelectedElements={duplicateSelectedElements}
+            groupSelectedElements={groupSelectedElements}
+            ungroupSelectedElement={ungroupSelectedElement}
+            editingGroupId={editingGroupId}
+            setEditingGroupId={setEditingGroupId}
+            bringForward={bringForward}
+            sendBackward={sendBackward}
+            bringToFront={bringToFront}
+            sendToBack={sendToBack}
+          />
+        </div>
 
+        {/* Workspace Canvas (Top primary area on mobile, flex-1) */}
         <WorkspaceCanvas
           state={state}
           document={docModel}
@@ -285,13 +292,53 @@ export default function App() {
           onClearAllGuides={clearAllGuides}
         />
 
-        {/* Mobile Asset Tray (Inside main flex column directly below WorkspaceCanvas) */}
+        {/* Mobile Asset Tray (Directly below WorkspaceCanvas on mobile) */}
         <div className="md:hidden shrink-0">
           <AssetTray
             assets={state.assets}
             onAddAsset={addAsset}
             onRemoveAsset={removeAsset}
             onLoadSamplePhotos={loadSamplePhotos}
+          />
+        </div>
+
+        {/* Mobile Tool Panel & Bottom Navigation Dock (Directly below AssetTray on mobile) */}
+        <div className="md:hidden shrink-0">
+          <Sidebar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            state={state}
+            setLayoutId={setLayoutId}
+            setAspectRatio={setAspectRatio}
+            updateFrameSettings={updateFrameSettings}
+            updateBackgroundSettings={updateBackgroundSettings}
+            addTextOverlay={addTextOverlay}
+            updateTextOverlay={updateTextOverlay}
+            removeTextOverlay={removeTextOverlay}
+            addSticker={addSticker}
+            removeSticker={removeSticker}
+            addShapeElement={addShapeElement}
+            selectedOverlayId={selectedOverlayId}
+            setSelectedOverlayId={setSelectedOverlayId}
+            document={docModel}
+            selection={selection}
+            setPrimarySelection={setPrimarySelection}
+            toggleSelection={toggleSelection}
+            toggleVisibility={toggleVisibility}
+            toggleLock={toggleLock}
+            renameElement={renameElement}
+            duplicateElement={duplicateElement}
+            removeElement={removeElement}
+            deleteSelectedElements={deleteSelectedElements}
+            duplicateSelectedElements={duplicateSelectedElements}
+            groupSelectedElements={groupSelectedElements}
+            ungroupSelectedElement={ungroupSelectedElement}
+            editingGroupId={editingGroupId}
+            setEditingGroupId={setEditingGroupId}
+            bringForward={bringForward}
+            sendBackward={sendBackward}
+            bringToFront={bringToFront}
+            sendToBack={sendToBack}
           />
         </div>
       </div>
