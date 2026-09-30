@@ -76,7 +76,7 @@ export default function Header({
   };
 
   return (
-    <header className="w-full max-w-full min-w-0 h-14 md:h-16 px-2 sm:px-4 border-b border-stone-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between shrink-0 z-40 shadow-xs relative gap-1.5 pt-[env(safe-area-inset-top,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] overflow-visible box-border">
+    <header data-layout="header" className="w-full max-w-full min-w-0 h-14 md:h-16 px-2 sm:px-4 border-b border-stone-200/80 bg-white/80 backdrop-blur-md flex items-center justify-between shrink-0 z-40 shadow-xs relative gap-1.5 pt-[env(safe-area-inset-top,0px)] pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] overflow-visible box-border">
       {/* Brand & Project Title Section */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink min-w-0">
         <img
