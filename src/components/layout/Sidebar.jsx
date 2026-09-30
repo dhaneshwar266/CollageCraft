@@ -765,32 +765,8 @@ export default function Sidebar({
 
       {/* MOBILE TOOL PANEL & BOTTOM NAVIGATION DOCK (< md: 768px) */}
       <div className="md:hidden flex flex-col shrink-0 z-30 bg-white border-t border-stone-200">
-        {/* Mobile Expandable Tool Panel */}
-        {isMobileOpen && (
-          <div className="max-h-[35vh] xs:max-h-[38vh] sm:max-h-[40vh] max-h-[310px] min-h-[190px] bg-white border-b border-stone-200 flex flex-col shrink-0 min-h-0">
-            {/* Sheet Header */}
-            <div className="flex items-center justify-between px-3.5 py-1.5 border-b border-stone-200/80 bg-stone-50/90 relative shrink-0 select-none">
-              <div className="w-8 h-1 bg-stone-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-1" />
-              <span className="text-[11px] font-bold text-stone-800 uppercase tracking-wider mt-0.5">
-                {tabs.find((t) => t.id === activeTab)?.label || 'Tools'}
-              </span>
-              <button
-                onClick={() => setIsMobileOpen(false)}
-                className="p-1 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-200/60 transition-colors cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Sheet Body */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs min-h-0 no-scrollbar">
-              {renderTabContent()}
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Fixed Tool Dock Bar */}
-        <div className="h-12 bg-white/95 backdrop-blur-md flex items-center justify-start gap-0.5 px-1 overflow-x-auto overflow-y-hidden no-scrollbar flex-nowrap pb-[env(safe-area-inset-bottom,0px)] shrink-0">
+        {/* Mobile Fixed Tool Dock Bar (Tool Bar: Layouts, Layers, Shapes, Spacing, Background, Text, Stickers) */}
+        <div className="h-12 bg-white/95 backdrop-blur-md flex items-center justify-start gap-0.5 px-1 overflow-x-auto overflow-y-hidden no-scrollbar flex-nowrap shrink-0 border-b border-stone-200/60">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id && isMobileOpen;
@@ -815,6 +791,30 @@ export default function Sidebar({
             );
           })}
         </div>
+
+        {/* Mobile Expandable Tool Panel (Appears directly BELOW Tool Bar when opened) */}
+        {isMobileOpen && (
+          <div className="max-h-[30vh] xs:max-h-[32vh] sm:max-h-[35vh] max-h-[260px] min-h-[160px] bg-white border-b border-stone-200 flex flex-col shrink-0 min-h-0 pb-[env(safe-area-inset-bottom,0px)]">
+            {/* Sheet Header */}
+            <div className="flex items-center justify-between px-3.5 py-1.5 border-b border-stone-200/80 bg-stone-50/90 relative shrink-0 select-none">
+              <div className="w-8 h-1 bg-stone-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-1" />
+              <span className="text-[11px] font-bold text-stone-800 uppercase tracking-wider mt-0.5">
+                {tabs.find((t) => t.id === activeTab)?.label || 'Tools'}
+              </span>
+              <button
+                onClick={() => setIsMobileOpen(false)}
+                className="p-1 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-200/60 transition-colors cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Sheet Body */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs min-h-0 no-scrollbar">
+              {renderTabContent()}
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
