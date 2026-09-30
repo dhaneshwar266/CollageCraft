@@ -331,7 +331,7 @@ export default function Sidebar({
 
       {/* TAB: SHAPES */}
       {activeTab === 'shapes' && (
-        <div className="space-y-4">
+        <div className="space-y-4 w-full max-w-full min-w-0">
           <ShapeInsertMenu onAddShape={(shapeType) => addShapeElement(shapeType)} />
         </div>
       )}
