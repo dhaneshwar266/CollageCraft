@@ -183,72 +183,58 @@ export default function App() {
     saveCurrentProject,
   ]);
 
-  // Diagnostic Layout Logging for Mobile (<=767px)
+  // Diagnostic Layout Logging for Mobile (<=767px) & Real Device Viewport Verification
   useEffect(() => {
     const logMobileLayoutDiagnostics = () => {
       if (window.innerWidth > 767) return;
 
-      const getElemMetrics = (selector) => {
-        const el = document.querySelector(selector);
-        if (!el) return null;
-        const rect = el.getBoundingClientRect();
-        const comp = window.getComputedStyle(el);
-        return {
-          name: selector,
-          top: Math.round(rect.top),
-          bottom: Math.round(rect.bottom),
-          height: Math.round(rect.height),
-          computedHeight: comp.height,
-          position: comp.position,
-          display: comp.display,
-          flex: comp.flex,
-          flexShrink: comp.flexShrink,
-          flexGrow: comp.flexGrow,
-          minHeight: comp.minHeight,
-          maxHeight: comp.maxHeight,
-          overflow: comp.overflow,
-        };
+      const el = document.querySelector('[data-layout="mobile-tool-bar"]');
+      const toolBarDomInfo = el
+        ? {
+            exists: true,
+            display: getComputedStyle(el).display,
+            visibility: getComputedStyle(el).visibility,
+            opacity: getComputedStyle(el).opacity,
+            position: getComputedStyle(el).position,
+            height: el.getBoundingClientRect().height,
+            width: el.getBoundingClientRect().width,
+            top: el.getBoundingClientRect().top,
+            bottom: el.getBoundingClientRect().bottom,
+            zIndex: getComputedStyle(el).zIndex,
+            overflow: getComputedStyle(el).overflow,
+            transform: getComputedStyle(el).transform,
+          }
+        : { exists: false };
+
+      const viewportDimensions = {
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+        clientWidth: document.documentElement.clientWidth,
+        clientHeight: document.documentElement.clientHeight,
+        visualViewportWidth: window.visualViewport?.width,
+        visualViewportHeight: window.visualViewport?.height,
+        visualViewportOffsetTop: window.visualViewport?.offsetTop,
       };
 
-      const headerMetrics = getElemMetrics('[data-layout="header"]');
-      const workspaceMainMetrics = getElemMetrics('[data-layout="workspace-main"]');
-      const workspaceCanvasMetrics = getElemMetrics('[data-layout="workspace-canvas"]');
-      const assetTrayMetrics = getElemMetrics('[data-layout="asset-tray"]');
-      const toolBarMetrics = getElemMetrics('[data-layout="tool-bar"]');
-      const toolPanelMetrics = getElemMetrics('[data-layout="tool-panel"]');
-      const bottomNavMetrics = getElemMetrics('[data-layout="bottom-nav"]');
-
-      const hH = headerMetrics?.height || 0;
-      const wH = workspaceMainMetrics?.height || 0;
-      const aH = assetTrayMetrics?.height || 0;
-      const tH = toolBarMetrics?.height || 0;
-      const pH = toolPanelMetrics?.height || 0;
-      const totalUsedHeight = hH + wH + aH + tH + pH;
-      const vpHeight = window.innerHeight;
-      const visualVpHeight = window.visualViewport?.height || window.innerHeight;
-
-      console.log('[MOBILE DIAGNOSTICS]', {
-        windowInnerHeight: vpHeight,
-        visualViewportHeight: visualVpHeight,
-        HEADER: headerMetrics,
-        WORKSPACE_MAIN: workspaceMainMetrics,
-        WORKSPACE_CANVAS: workspaceCanvasMetrics,
-        ASSET_TRAY: assetTrayMetrics,
-        TOOL_BAR: toolBarMetrics,
-        TOOL_PANEL: toolPanelMetrics,
-        BOTTOM_NAV: bottomNavMetrics,
-        TOTAL_USED_HEIGHT: totalUsedHeight,
-        OVERFLOW_DELTA: totalUsedHeight - vpHeight,
-      });
+      console.log('[REAL DEVICE MOBILE TOOL BAR DOM]', toolBarDomInfo);
+      console.log('[REAL DEVICE VIEWPORT METRICS]', viewportDimensions);
     };
 
     logMobileLayoutDiagnostics();
     window.addEventListener('resize', logMobileLayoutDiagnostics);
-    return () => window.removeEventListener('resize', logMobileLayoutDiagnostics);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', logMobileLayoutDiagnostics);
+    }
+    return () => {
+      window.removeEventListener('resize', logMobileLayoutDiagnostics);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', logMobileLayoutDiagnostics);
+      }
+    };
   }, []);
 
   return (
-    <div data-layout="root-container" className="w-full max-w-full min-w-0 h-screen h-[100dvh] flex flex-col bg-[#f8fafc] text-stone-900 overflow-hidden font-sans box-border">
+    <div data-layout="root-container" className="w-full max-w-full min-w-0 h-[100dvh] min-h-[100dvh] flex flex-col bg-[#f8fafc] text-stone-900 overflow-hidden font-sans box-border">
       {/* Session Recovery Banner */}
       {recoveryAvailable && (
         <RecoveryBanner onRecover={recoverSession} onDiscard={discardSession} />
