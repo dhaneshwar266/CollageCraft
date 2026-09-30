@@ -56,7 +56,7 @@ export default function ShapeInsertMenu({ onAddShape, onClose }) {
   };
 
   return (
-    <div className="bg-white border border-stone-200 rounded-3xl shadow-2xl p-4 w-72 animate-in fade-in zoom-in-95 duration-150 select-none">
+    <div className="w-full max-w-full min-w-0 bg-white border border-stone-200/80 rounded-2xl p-3 sm:p-4 select-none box-border">
       {/* Header */}
       <div className="flex items-center justify-between pb-2.5 mb-2 border-b border-stone-200">
         <div className="flex items-center gap-2">
@@ -76,7 +76,7 @@ export default function ShapeInsertMenu({ onAddShape, onClose }) {
       </div>
 
       {/* Category Selector */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-2 mb-2 border-b border-stone-100">
+      <div className="flex items-center gap-1 overflow-x-auto pb-2 mb-2 border-b border-stone-100 no-scrollbar w-full">
         {categories.map((cat) => (
           <button
             key={cat.id}
@@ -93,7 +93,7 @@ export default function ShapeInsertMenu({ onAddShape, onClose }) {
       </div>
 
       {/* Shape Grid Buttons */}
-      <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto pr-0.5">
+      <div className="grid grid-cols-3 gap-2 overflow-y-auto pr-0.5 w-full">
         {filteredShapes.map((shape) => (
           <button
             key={shape.id}
