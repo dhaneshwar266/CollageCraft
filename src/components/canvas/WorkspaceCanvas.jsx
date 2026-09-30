@@ -106,7 +106,10 @@ export default function WorkspaceCanvas({
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [isPanningViewport, setIsPanningViewport] = useState(false);
   const [canvasRectState, setCanvasRectState] = useState(null);
-  const [workspaceBounds, setWorkspaceBounds] = useState({ width: 800, height: 600 });
+  const [workspaceBounds, setWorkspaceBounds] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 800,
+    height: typeof window !== 'undefined' ? Math.max(200, window.innerHeight - 200) : 600,
+  });
 
   const aspectSpec = ASPECT_RATIOS.find((a) => a.id === aspectRatio) || ASPECT_RATIOS[0];
   const targetRatio = aspectSpec.ratio;
@@ -615,6 +618,7 @@ export default function WorkspaceCanvas({
 
   return (
     <main
+      data-layout="workspace-main"
       ref={mainRef}
       onMouseDown={handleMainMouseDown}
       onClick={handleCanvasClick}
@@ -647,8 +651,9 @@ export default function WorkspaceCanvas({
 
       {/* VIEWPORT TRANSFORM CONTAINER (Workspace Scale 1.0 Locked) */}
       <div
+        data-layout="workspace-transform"
         onClick={handleCanvasClick}
-        className="relative flex items-start md:items-center justify-center w-full h-full overflow-hidden"
+        className="absolute inset-0 md:relative md:w-full md:h-full flex items-center justify-center overflow-hidden"
         style={{
           transform: `translate(${viewport?.panX || 0}px, ${viewport?.panY || 0}px) scale(1)`,
           transformOrigin: 'center center',
