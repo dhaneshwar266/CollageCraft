@@ -766,7 +766,7 @@ export default function Sidebar({
       {/* MOBILE TOOL PANEL & BOTTOM NAVIGATION DOCK (< md: 768px) */}
       <div data-layout="bottom-nav" className="md:hidden flex flex-col shrink-0 z-30 bg-white border-t border-stone-200">
         {/* Mobile Fixed Tool Dock Bar (Tool Bar: Layouts, Layers, Shapes, Spacing, Background, Text, Stickers) */}
-        <div data-layout="tool-bar" className="h-12 bg-white/95 backdrop-blur-md flex items-center justify-start gap-0.5 px-1 overflow-x-auto overflow-y-hidden no-scrollbar flex-nowrap shrink-0 border-b border-stone-200/60">
+        <div data-layout="mobile-tool-bar" className="h-12 bg-white/95 backdrop-blur-md flex items-center justify-start gap-0.5 px-1 overflow-x-auto overflow-y-hidden no-scrollbar flex-nowrap shrink-0 border-b border-stone-200/60 pb-[env(safe-area-inset-bottom,0px)]">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id && isMobileOpen;
