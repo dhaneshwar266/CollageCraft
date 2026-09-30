@@ -767,7 +767,7 @@ export default function Sidebar({
       <div className="md:hidden flex flex-col shrink-0 z-30 bg-white border-t border-stone-200">
         {/* Mobile Expandable Tool Panel */}
         {isMobileOpen && (
-          <div className="max-h-[140px] xs:max-h-[160px] sm:max-h-[180px] bg-white border-b border-stone-200 flex flex-col shrink-0 min-h-0">
+          <div className="max-h-[35vh] xs:max-h-[38vh] sm:max-h-[40vh] max-h-[310px] min-h-[190px] bg-white border-b border-stone-200 flex flex-col shrink-0 min-h-0">
             {/* Sheet Header */}
             <div className="flex items-center justify-between px-3.5 py-1.5 border-b border-stone-200/80 bg-stone-50/90 relative shrink-0 select-none">
               <div className="w-8 h-1 bg-stone-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-1" />
@@ -783,7 +783,7 @@ export default function Sidebar({
             </div>
 
             {/* Sheet Body */}
-            <div className="flex-1 overflow-y-auto p-2.5 space-y-3 text-xs min-h-0 no-scrollbar">
+            <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs min-h-0 no-scrollbar">
               {renderTabContent()}
             </div>
           </div>
