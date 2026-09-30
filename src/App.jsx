@@ -183,8 +183,72 @@ export default function App() {
     saveCurrentProject,
   ]);
 
+  // Diagnostic Layout Logging for Mobile (<=767px)
+  useEffect(() => {
+    const logMobileLayoutDiagnostics = () => {
+      if (window.innerWidth > 767) return;
+
+      const getElemMetrics = (selector) => {
+        const el = document.querySelector(selector);
+        if (!el) return null;
+        const rect = el.getBoundingClientRect();
+        const comp = window.getComputedStyle(el);
+        return {
+          name: selector,
+          top: Math.round(rect.top),
+          bottom: Math.round(rect.bottom),
+          height: Math.round(rect.height),
+          computedHeight: comp.height,
+          position: comp.position,
+          display: comp.display,
+          flex: comp.flex,
+          flexShrink: comp.flexShrink,
+          flexGrow: comp.flexGrow,
+          minHeight: comp.minHeight,
+          maxHeight: comp.maxHeight,
+          overflow: comp.overflow,
+        };
+      };
+
+      const headerMetrics = getElemMetrics('[data-layout="header"]');
+      const workspaceMainMetrics = getElemMetrics('[data-layout="workspace-main"]');
+      const workspaceCanvasMetrics = getElemMetrics('[data-layout="workspace-canvas"]');
+      const assetTrayMetrics = getElemMetrics('[data-layout="asset-tray"]');
+      const toolBarMetrics = getElemMetrics('[data-layout="tool-bar"]');
+      const toolPanelMetrics = getElemMetrics('[data-layout="tool-panel"]');
+      const bottomNavMetrics = getElemMetrics('[data-layout="bottom-nav"]');
+
+      const hH = headerMetrics?.height || 0;
+      const wH = workspaceMainMetrics?.height || 0;
+      const aH = assetTrayMetrics?.height || 0;
+      const tH = toolBarMetrics?.height || 0;
+      const pH = toolPanelMetrics?.height || 0;
+      const totalUsedHeight = hH + wH + aH + tH + pH;
+      const vpHeight = window.innerHeight;
+      const visualVpHeight = window.visualViewport?.height || window.innerHeight;
+
+      console.log('[MOBILE DIAGNOSTICS]', {
+        windowInnerHeight: vpHeight,
+        visualViewportHeight: visualVpHeight,
+        HEADER: headerMetrics,
+        WORKSPACE_MAIN: workspaceMainMetrics,
+        WORKSPACE_CANVAS: workspaceCanvasMetrics,
+        ASSET_TRAY: assetTrayMetrics,
+        TOOL_BAR: toolBarMetrics,
+        TOOL_PANEL: toolPanelMetrics,
+        BOTTOM_NAV: bottomNavMetrics,
+        TOTAL_USED_HEIGHT: totalUsedHeight,
+        OVERFLOW_DELTA: totalUsedHeight - vpHeight,
+      });
+    };
+
+    logMobileLayoutDiagnostics();
+    window.addEventListener('resize', logMobileLayoutDiagnostics);
+    return () => window.removeEventListener('resize', logMobileLayoutDiagnostics);
+  }, []);
+
   return (
-    <div className="w-full max-w-full min-w-0 h-screen h-[100dvh] flex flex-col bg-[#f8fafc] text-stone-900 overflow-hidden font-sans box-border">
+    <div data-layout="root-container" className="w-full max-w-full min-w-0 h-screen h-[100dvh] flex flex-col bg-[#f8fafc] text-stone-900 overflow-hidden font-sans box-border">
       {/* Session Recovery Banner */}
       {recoveryAvailable && (
         <RecoveryBanner onRecover={recoverSession} onDiscard={discardSession} />
@@ -214,7 +278,7 @@ export default function App() {
           On Desktop (>=768px): flex-row with Sidebar left, WorkspaceCanvas right, Desktop AssetTray across bottom.
           On Mobile (<=767px): flex-col with WorkspaceCanvas (top) -> AssetTray (middle) -> Sidebar Mobile Dock/Panel (bottom).
       */}
-      <div className="flex-1 flex flex-col md:flex-row w-full max-w-full min-w-0 overflow-hidden relative box-border min-h-0">
+      <div data-layout="main-body" className="flex-1 flex flex-col md:flex-row w-full max-w-full min-w-0 overflow-hidden relative box-border min-h-0">
         {/* Desktop Sidebar (Hidden on mobile) */}
         <div className="hidden md:flex shrink-0">
           <Sidebar
