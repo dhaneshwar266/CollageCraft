@@ -764,9 +764,9 @@ export default function Sidebar({
       </aside>
 
       {/* MOBILE TOOL PANEL & BOTTOM NAVIGATION DOCK (< md: 768px) */}
-      <div className="md:hidden flex flex-col shrink-0 z-30 bg-white border-t border-stone-200">
+      <div data-layout="bottom-nav" className="md:hidden flex flex-col shrink-0 z-30 bg-white border-t border-stone-200">
         {/* Mobile Fixed Tool Dock Bar (Tool Bar: Layouts, Layers, Shapes, Spacing, Background, Text, Stickers) */}
-        <div className="h-12 bg-white/95 backdrop-blur-md flex items-center justify-start gap-0.5 px-1 overflow-x-auto overflow-y-hidden no-scrollbar flex-nowrap shrink-0 border-b border-stone-200/60">
+        <div data-layout="tool-bar" className="h-12 bg-white/95 backdrop-blur-md flex items-center justify-start gap-0.5 px-1 overflow-x-auto overflow-y-hidden no-scrollbar flex-nowrap shrink-0 border-b border-stone-200/60">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id && isMobileOpen;
@@ -794,7 +794,7 @@ export default function Sidebar({
 
         {/* Mobile Expandable Tool Panel (Appears directly BELOW Tool Bar when opened) */}
         {isMobileOpen && (
-          <div className="max-h-[30vh] xs:max-h-[32vh] sm:max-h-[35vh] max-h-[260px] min-h-[160px] bg-white border-b border-stone-200 flex flex-col shrink-0 min-h-0 pb-[env(safe-area-inset-bottom,0px)]">
+          <div data-layout="tool-panel" className="max-h-[30vh] xs:max-h-[32vh] sm:max-h-[35vh] max-h-[260px] min-h-[160px] bg-white border-b border-stone-200 flex flex-col shrink-0 min-h-0 pb-[env(safe-area-inset-bottom,0px)]">
             {/* Sheet Header */}
             <div className="flex items-center justify-between px-3.5 py-1.5 border-b border-stone-200/80 bg-stone-50/90 relative shrink-0 select-none">
               <div className="w-8 h-1 bg-stone-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-1" />
