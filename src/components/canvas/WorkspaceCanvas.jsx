@@ -618,7 +618,7 @@ export default function WorkspaceCanvas({
       ref={mainRef}
       onMouseDown={handleMainMouseDown}
       onClick={handleCanvasClick}
-      className={`flex-1 w-full max-w-full min-w-0 h-full bg-[#f8fafc] relative flex flex-col items-center justify-start md:justify-center pt-2 sm:pt-3 md:pt-0 overflow-hidden select-none box-border ${
+      className={`flex-1 w-full max-w-full min-w-0 min-h-0 md:h-full bg-[#f8fafc] relative flex flex-col items-center justify-start md:justify-center pt-2 sm:pt-3 md:pt-0 overflow-hidden select-none box-border ${
         isSpacePressed ? (isPanningViewport ? 'cursor-grabbing' : 'cursor-grab') : ''
       }`}
     >
