@@ -73,6 +73,7 @@ export default function Sidebar({
   const activePhotoCount = Math.max(activePhotos.length, assets.length);
   const photoCount = activePhotoCount;
   const [activeCategory, setActiveCategory] = useState('All');
+  const [activeLayoutSubTab, setActiveLayoutSubTab] = useState('aspect-ratio');
 
   // Filter templates so NO template with capacity < activePhotoCount is displayed
   const validTemplates = React.useMemo(() => {
@@ -120,71 +121,107 @@ export default function Sidebar({
     <>
       {/* TAB 1: LAYOUTS */}
       {activeTab === 'layouts' && (
-        <div className="space-y-6">
-          {/* Aspect Ratio Selector */}
-          <div className="space-y-3">
-            <label className="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center justify-between">
-              <span>Canvas Aspect Ratio</span>
-              <span className="text-[#c25e40] font-mono">{aspectRatio}</span>
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {ASPECT_RATIOS.map((item) => {
-                const isSelected = aspectRatio === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setAspectRatio(item.id)}
-                    className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-[#c25e40] bg-amber-50 text-stone-900 ring-1 ring-[#c25e40]/50'
-                        : 'border-stone-200 bg-stone-50/60 text-stone-700 hover:border-stone-300 hover:bg-white'
-                    }`}
-                  >
-                    <span className="text-xs font-bold">{item.id}</span>
-                    <span className="text-[10px] text-stone-500 truncate">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="h-[1px] bg-stone-200" />
-
-          {/* Mode Switch: Grid Presets vs Freestyle Scrapbook */}
-          <div className="space-y-3">
-            <label className="text-xs font-bold uppercase tracking-wider text-stone-500">
+        <div className="space-y-4">
+          {/* Sub-tab Navigation Bar: 3 side-by-side buttons in one horizontal row */}
+          <div className="grid grid-cols-3 gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200/80 shrink-0 w-full select-none">
+            <button
+              onClick={() => setActiveLayoutSubTab('aspect-ratio')}
+              className={`py-1.5 px-1 text-[11px] font-bold rounded-lg transition-all text-center truncate cursor-pointer ${
+                activeLayoutSubTab === 'aspect-ratio'
+                  ? 'bg-[#c25e40] text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+              }`}
+            >
+              Canvas Aspect
+            </button>
+            <button
+              onClick={() => setActiveLayoutSubTab('collage-mode')}
+              className={`py-1.5 px-1 text-[11px] font-bold rounded-lg transition-all text-center truncate cursor-pointer ${
+                activeLayoutSubTab === 'collage-mode'
+                  ? 'bg-[#c25e40] text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+              }`}
+            >
               Collage Mode
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setLayoutId('side-by-side')}
-                className={`p-3 rounded-xl border text-center font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
-                  layoutId !== 'freestyle'
-                    ? 'border-[#c25e40] bg-[#c25e40] text-white shadow-xs'
-                    : 'border-stone-200 bg-stone-50 text-stone-600 hover:text-stone-900'
-                }`}
-              >
-                <LayoutGrid className="w-4 h-4" />
-                <span>Smart Grid</span>
-              </button>
-
-              <button
-                onClick={() => setLayoutId('freestyle')}
-                className={`p-3 rounded-xl border text-center font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
-                  layoutId === 'freestyle'
-                    ? 'border-amber-800 bg-gradient-to-r from-amber-700 to-stone-800 text-white shadow-xs'
-                    : 'border-stone-200 bg-stone-50 text-stone-600 hover:text-stone-900'
-                }`}
-              >
-                <Move className="w-4 h-4" />
-                <span>Freestyle</span>
-              </button>
-            </div>
+            </button>
+            <button
+              onClick={() => setActiveLayoutSubTab('grid-templates')}
+              className={`py-1.5 px-1 text-[11px] font-bold rounded-lg transition-all text-center truncate cursor-pointer ${
+                activeLayoutSubTab === 'grid-templates'
+                  ? 'bg-[#c25e40] text-white shadow-xs'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
+              }`}
+            >
+              Grid Templates
+            </button>
           </div>
 
-          {/* Grid Preset Templates List */}
-          {layoutId !== 'freestyle' && (
-            <div className="space-y-4">
+          {/* Sub-tab 1: Aspect Ratio Selector */}
+          {activeLayoutSubTab === 'aspect-ratio' && (
+            <div className="space-y-3 animate-in fade-in duration-150">
+              <label className="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center justify-between">
+                <span>Canvas Aspect Ratio</span>
+                <span className="text-[#c25e40] font-mono">{aspectRatio}</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {ASPECT_RATIOS.map((item) => {
+                  const isSelected = aspectRatio === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setAspectRatio(item.id)}
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-[#c25e40] bg-amber-50 text-stone-900 ring-1 ring-[#c25e40]/50'
+                          : 'border-stone-200 bg-stone-50/60 text-stone-700 hover:border-stone-300 hover:bg-white'
+                      }`}
+                    >
+                      <span className="text-xs font-bold">{item.id}</span>
+                      <span className="text-[10px] text-stone-500 truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Sub-tab 2: Collage Mode */}
+          {activeLayoutSubTab === 'collage-mode' && (
+            <div className="space-y-3 animate-in fade-in duration-150">
+              <label className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                Collage Mode
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setLayoutId('side-by-side')}
+                  className={`p-3 rounded-xl border text-center font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
+                    layoutId !== 'freestyle'
+                      ? 'border-[#c25e40] bg-[#c25e40] text-white shadow-xs'
+                      : 'border-stone-200 bg-stone-50 text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  <span>Smart Grid</span>
+                </button>
+
+                <button
+                  onClick={() => setLayoutId('freestyle')}
+                  className={`p-3 rounded-xl border text-center font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
+                    layoutId === 'freestyle'
+                      ? 'border-amber-800 bg-gradient-to-r from-amber-700 to-stone-800 text-white shadow-xs'
+                      : 'border-stone-200 bg-stone-50 text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Move className="w-4 h-4" />
+                  <span>Freestyle</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-tab 3: Grid Preset Templates List */}
+          {activeLayoutSubTab === 'grid-templates' && (
+            <div className="space-y-4 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase tracking-wider text-stone-500">
                   Grid Templates ({activePhotoCount} {activePhotoCount === 1 ? 'Photo' : 'Photos'} Active)
