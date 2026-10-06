@@ -588,7 +588,7 @@ export function useCollageState() {
       setAssets(updatedAssets);
 
       const newElements = document.elements.map((el) =>
-        el.id === cellId ? { ...el, assetId: newAsset.id, panX: 0, panY: 0, zoom: 1 } : el
+        el.id === cellId ? { ...el, assetId: newAsset.id, panX: 0, panY: 0, zoom: 1, objectFit: "contain" } : el
       );
 
       pushDocument({
