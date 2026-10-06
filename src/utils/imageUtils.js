@@ -218,8 +218,8 @@ export function getImageTransformStyle(element = {}) {
 /**
  * Calculates dynamic pan bounds and clamps panX / panY to prevent revealing blank space
  */
-export function clampImagePan(panX, panY, cellWidth, cellHeight, zoom = 1, asset = null) {
-  const z = Math.max(1, zoom);
+export function clampImagePan(panX, panY, cellWidth, cellHeight, zoom = 1, asset = null, objectFit = "cover") {
+  const z = Math.max(0.1, zoom);
   const cW = Math.max(10, cellWidth || 300);
   const cH = Math.max(10, cellHeight || 300);
 
@@ -231,19 +231,43 @@ export function clampImagePan(panX, panY, cellWidth, cellHeight, zoom = 1, asset
   const cellRatio = cW / cH;
 
   let baseW, baseH;
-  if (imgRatio > cellRatio) {
-    baseH = cH;
-    baseW = baseH * imgRatio;
+  if (objectFit === "contain") {
+    if (imgRatio > cellRatio) {
+      baseW = cW;
+      baseH = baseW / imgRatio;
+    } else {
+      baseH = cH;
+      baseW = baseH * imgRatio;
+    }
   } else {
-    baseW = cW;
-    baseH = baseW / imgRatio;
+    if (imgRatio > cellRatio) {
+      baseH = cH;
+      baseW = baseH * imgRatio;
+    } else {
+      baseW = cW;
+      baseH = baseW / imgRatio;
+    }
   }
 
   const renderedW = baseW * z;
   const renderedH = baseH * z;
 
-  const maxPanX = Math.max(0, (renderedW - cW) / 2);
-  const maxPanY = Math.max(0, (renderedH - cH) / 2);
+  let maxPanX, maxPanY;
+  if (objectFit === "contain") {
+    maxPanX = Math.max(cW / 2, Math.abs(cW - renderedW));
+    maxPanY = Math.max(cH / 2, Math.abs(cH - renderedH));
+  } else {
+    maxPanX = Math.max(0, (renderedW - cW) / 2);
+    maxPanY = Math.max(0, (renderedH - cH) / 2);
+  }
+
+  if (z > 1) {
+    maxPanX = Math.max(maxPanX, (renderedW - cW) / 2);
+    maxPanY = Math.max(maxPanY, (renderedH - cH) / 2);
+  } else if (z < 1) {
+    maxPanX = Math.max(maxPanX, Math.abs(cW - renderedW) / 2);
+    maxPanY = Math.max(maxPanY, Math.abs(cH - renderedH) / 2);
+  }
 
   const clampedX = Math.max(-maxPanX, Math.min(maxPanX, panX));
   const clampedY = Math.max(-maxPanY, Math.min(maxPanY, panY));
@@ -301,6 +325,7 @@ export function getResetImageFiltersState() {
 
 export function getResetImageTransformState() {
   return {
+    objectFit: "cover",
     zoom: 1,
     panX: 0,
     panY: 0,
