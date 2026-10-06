@@ -379,7 +379,7 @@ export default function FreestyleCanvasView({
                 src={asset.url}
                 alt={asset.name}
                 draggable={false}
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                className={`absolute inset-0 w-full h-full pointer-events-none ${cell.objectFit === "contain" ? "object-contain" : "object-cover"}`}
                 style={{
                   filter: filterCSS,
                   transformOrigin: 'center center',
