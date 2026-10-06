@@ -20,6 +20,7 @@ import {
   ZoomOut,
   ChevronDown,
   Check,
+  Scaling,
 } from 'lucide-react';
 import {
   EXTENDED_FILTER_PRESETS,
@@ -150,13 +151,20 @@ export default function ImageEditingToolbar({
     if (!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = (event) => {
-      if (onReplaceAsset && targetElement) {
-        onReplaceAsset(targetElement.id, {
-          id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          name: file.name,
-          url: event.target.result,
-        });
-      }
+      const dataUrl = event.target.result;
+      const img = new Image();
+      img.onload = () => {
+        if (onReplaceAsset && targetElement) {
+          onReplaceAsset(targetElement.id, {
+            id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            name: file.name,
+            url: dataUrl,
+            width: img.naturalWidth || img.width || 800,
+            height: img.naturalHeight || img.height || 800,
+          });
+        }
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -168,7 +176,7 @@ export default function ImageEditingToolbar({
   };
 
   return (
-    <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-40 bg-white/95 border border-stone-200/90 rounded-2xl shadow-xl backdrop-blur-xl p-2 sm:p-2.5 text-stone-900 flex flex-col gap-2 w-[calc(100vw-16px)] max-w-[620px] sm:w-auto sm:min-w-[420px] animate-in fade-in slide-in-from-top-2 duration-200 select-none max-h-[85vh] overflow-y-auto pt-[env(safe-area-inset-top,0px)] ImageEditingToolbar">
+    <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-40 md:relative md:top-0 md:left-0 md:translate-x-0 md:z-30 md:w-full md:max-w-none md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:border-stone-200/80 md:bg-white/95 md:shadow-xs md:p-2.5 md:shrink-0 md:max-h-none bg-white/95 border border-stone-200/90 rounded-2xl shadow-xl backdrop-blur-xl p-2 sm:p-2.5 text-stone-900 flex flex-col gap-2 w-[calc(100vw-16px)] max-w-[620px] sm:w-auto sm:min-w-[420px] animate-in fade-in slide-in-from-top-2 duration-200 select-none max-h-[85vh] overflow-y-auto pt-[env(safe-area-inset-top,0px)] ImageEditingToolbar">
       <input
         ref={fileInputRef}
         type="file"
@@ -579,6 +587,40 @@ export default function ImageEditingToolbar({
       {/* EXPANDABLE TAB: Transform (Rotate, Flip, Image Zoom, Internal Pan) */}
       {activeTab === 'transform' && (
         <div className="border-t border-stone-200/80 pt-2.5 pb-1 space-y-3.5 text-xs animate-in fade-in duration-150">
+          {/* Fit / Fill Mode Toggle */}
+          <div className="flex items-center justify-between gap-2 pb-1 border-b border-stone-100">
+            <span className="text-stone-600 font-medium">Image Fit Mode</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  applyLiveChange({ objectFit: "contain", zoom: 1, panX: 0, panY: 0 });
+                  applyCommitChange({ objectFit: "contain", zoom: 1, panX: 0, panY: 0 });
+                }}
+                className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all ${
+                  getVal("objectFit", "cover") === "contain"
+                    ? "bg-[#c25e40] text-white shadow-xs"
+                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                }`}
+              >
+                <Scaling className="w-3.5 h-3.5" />
+                <span>Fit (Full Photo)</span>
+              </button>
+              <button
+                onClick={() => {
+                  applyLiveChange({ objectFit: "cover", zoom: 1, panX: 0, panY: 0 });
+                  applyCommitChange({ objectFit: "cover", zoom: 1, panX: 0, panY: 0 });
+                }}
+                className={`px-2.5 py-1 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all ${
+                  getVal("objectFit", "cover") === "cover"
+                    ? "bg-[#c25e40] text-white shadow-xs"
+                    : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+                }`}
+              >
+                <span>Fill (Crop to Cell)</span>
+              </button>
+            </div>
+          </div>
+
           {/* Rotate & Flip controls */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
@@ -628,7 +670,7 @@ export default function ImageEditingToolbar({
             <ZoomOut className="w-3.5 h-3.5 text-stone-400" />
             <input
               type="range"
-              min="0.5"
+              min="0.2"
               max="5"
               step="0.05"
               value={getVal('zoom', 1) === 'Mixed' ? 1 : getVal('zoom', 1)}
