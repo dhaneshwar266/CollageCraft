@@ -24,11 +24,18 @@ export default function AssetTray({
       if (!file.type.startsWith('image/')) return;
       const reader = new FileReader();
       reader.onload = (event) => {
-        onAddAsset({
-          id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          name: file.name,
-          url: event.target.result,
-        });
+        const dataUrl = event.target.result;
+        const img = new Image();
+        img.onload = () => {
+          onAddAsset({
+            id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            name: file.name,
+            url: dataUrl,
+            width: img.naturalWidth || img.width || 800,
+            height: img.naturalHeight || img.height || 800,
+          });
+        };
+        img.src = dataUrl;
       };
       reader.readAsDataURL(file);
     });
