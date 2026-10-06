@@ -86,7 +86,8 @@ export default function GridCollageView({
           activeAction.cellW,
           activeAction.cellH,
           activeAction.zoom,
-          activeAction.asset
+          activeAction.asset,
+          activeAction.objectFit || "cover"
         );
 
         setActiveAction((prev) => (prev ? { ...prev, isDragging: true, currentPanX: newPanX, currentPanY: newPanY } : null));
@@ -371,7 +372,7 @@ export default function GridCollageView({
     if (cell.locked) return;
 
     const currentSpec = cell.specOverride || defaultSpec;
-    const isZoomed = (cell.zoom || 1) > 1.05;
+    const isPanMode = (cell.zoom || 1) > 1.05 || cell.objectFit === "contain" || (cell.panX || 0) !== 0 || (cell.panY || 0) !== 0 || selectedCellId === cell.id;
 
     const el = cellRefs.current[cell.id];
     let cellW = 300;
@@ -386,7 +387,7 @@ export default function GridCollageView({
     // Priority logic:
     // When cell zoom > 1.05, dragging inside image operates IN-CELL PANNING
     // Otherwise, dragging operates CELL SWAPPING
-    const effectiveActionType = (isZoomed && actionType === 'pan') ? 'in-cell-pan' : (actionType === 'pan' ? 'cell-swap' : actionType);
+    const effectiveActionType = (isPanMode && actionType === 'pan') ? 'in-cell-pan' : (actionType === 'pan' ? 'cell-swap' : actionType);
 
     if (effectiveActionType.startsWith('resize-') || effectiveActionType === 'move-grid') {
       window.__resizeMoveCounter = 0;
@@ -402,6 +403,7 @@ export default function GridCollageView({
       cellH,
       asset,
       zoom: cell.zoom || 1,
+      objectFit: cell.objectFit || "cover",
       isDragging: false,
       initialPanX: cell.panX || 0,
       initialPanY: cell.panY || 0,
@@ -652,7 +654,7 @@ export default function GridCollageView({
                     src={asset.url}
                     alt={asset.name}
                     draggable={false}
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                    className={`absolute inset-0 w-full h-full pointer-events-none ${cell.objectFit === "contain" ? "object-contain" : "object-cover"}`}
                     style={{
                       transformOrigin: 'center center',
                       transform: getImageTransformStyle(cell),
