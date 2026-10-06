@@ -97,7 +97,7 @@ export default function ShapeFormattingToolbar({
   const isStar = shapeType === 'star';
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-white/95 border border-stone-200/90 rounded-2xl shadow-xl backdrop-blur-xl p-2.5 text-stone-900 flex flex-col gap-2 min-w-[420px] max-w-[620px] animate-in fade-in slide-in-from-top-2 duration-200 select-none">
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 md:relative md:top-0 md:left-0 md:translate-x-0 md:z-30 md:w-full md:max-w-none md:rounded-none md:border-x-0 md:border-t-0 md:border-b md:border-stone-200/80 md:bg-white/95 md:shadow-xs md:p-2.5 md:shrink-0 bg-white/95 border border-stone-200/90 rounded-2xl shadow-xl backdrop-blur-xl p-2.5 text-stone-900 flex flex-col gap-2 min-w-[420px] max-w-[620px] animate-in fade-in slide-in-from-top-2 duration-200 select-none">
       {/* Top Main Buttons */}
       <div className="flex items-center justify-between gap-1.5 border-b border-stone-200/80 pb-2">
         <span className="text-xs font-bold text-stone-800 truncate max-w-[120px] pl-1">
