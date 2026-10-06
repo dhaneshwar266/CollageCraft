@@ -549,30 +549,24 @@ export default function WorkspaceCanvas({
       if (!file.type.startsWith('image/')) return;
       const reader = new FileReader();
       reader.onload = (event) => {
-        const newAsset = {
-          id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          name: file.name,
-          url: event.target.result,
-        };
+        const dataUrl = event.target.result;
+        const img = new Image();
+        img.onload = () => {
+          const newAsset = {
+            id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            name: file.name,
+            url: dataUrl,
+            width: img.naturalWidth || img.width || 800,
+            height: img.naturalHeight || img.height || 800,
+          };
 
-        if (index === 0 && targetCellId && onReplaceAsset) {
-          console.log('[IMAGE SELECTED]', {
-            assetId: newAsset.id,
-            targetCellId,
-          });
-          const targetEl = document?.elements?.find((el) => el.id === targetCellId);
-          console.log('[EMPTY CELL FILLED]', {
-            cellId: targetCellId,
-            assetId: newAsset.id,
-            x: targetEl?.x ?? 0,
-            y: targetEl?.y ?? 0,
-            width: targetEl?.width ?? 100,
-            height: targetEl?.height ?? 100,
-          });
-          onReplaceAsset(targetCellId, newAsset);
-        } else {
-          onAddAsset(newAsset);
-        }
+          if (index === 0 && targetCellId && onReplaceAsset) {
+            onReplaceAsset(targetCellId, newAsset);
+          } else {
+            onAddAsset(newAsset);
+          }
+        };
+        img.src = dataUrl;
       };
       reader.readAsDataURL(file);
     });
@@ -586,11 +580,18 @@ export default function WorkspaceCanvas({
       if (!file.type.startsWith('image/')) return;
       const reader = new FileReader();
       reader.onload = (event) => {
-        onAddAsset({
-          id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          name: file.name,
-          url: event.target.result,
-        });
+        const dataUrl = event.target.result;
+        const img = new Image();
+        img.onload = () => {
+          onAddAsset({
+            id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            name: file.name,
+            url: dataUrl,
+            width: img.naturalWidth || img.width || 800,
+            height: img.naturalHeight || img.height || 800,
+          });
+        };
+        img.src = dataUrl;
       };
       reader.readAsDataURL(file);
     });
@@ -626,18 +627,58 @@ export default function WorkspaceCanvas({
         isSpacePressed ? (isPanningViewport ? 'cursor-grabbing' : 'cursor-grab') : ''
       }`}
     >
-      {/* Top Left Floating Alignment & Distribution Toolbar */}
-      {(selection?.selectedIds?.length || 0) >= 1 && onAlignSelected && !isSpacePressed && (
-        <div className="absolute top-8 left-8 z-40 animate-in fade-in duration-200">
-          <AlignmentToolbar
-            selectedCount={selection.selectedIds.length}
-            onAlign={onAlignSelected}
-            onDistribute={onDistributeSelected}
-          />
-        </div>
+
+
+
+
+      {/* Contextual Image Editing Toolbar (Single and Multi-selection) */}
+      {selectedImageElements.length > 0 && (
+        <ImageEditingToolbar
+          selectedElements={selectedImageElements}
+          primaryElement={primarySelectedElement}
+          assetMap={assetMap}
+          onLiveUpdate={(liveMap) => {
+            if (onUpdateMultipleLive) onUpdateMultipleLive(liveMap);
+          }}
+          onCommitChange={(commitMap) => {
+            if (onCommitMultipleChange) onCommitMultipleChange(commitMap);
+            else if (onCommitCell && selectedCellId && commitMap[selectedCellId]) {
+              onCommitCell(selectedCellId, commitMap[selectedCellId]);
+            }
+          }}
+          onClose={() => handleSelectElement(null)}
+          onOpenCropModal={onOpenCropModal}
+          onReplaceAsset={onReplaceAsset}
+          onRemoveAsset={onRemoveCellAsset}
+        />
       )}
-
-
+      {selectedShapeElements.length > 0 && (
+        <ShapeFormattingToolbar
+          selectedElements={selectedShapeElements}
+          primaryElement={primarySelectedElement}
+          onLiveUpdate={(liveMap) => {
+            if (onUpdateMultipleLive) onUpdateMultipleLive(liveMap);
+          }}
+          onCommitChange={(commitMap) => {
+            if (onCommitMultipleChange) onCommitMultipleChange(commitMap);
+          }}
+          onClose={() => handleSelectElement(null)}
+        />
+      )}
+      {/* Contextual Sticker Formatting Toolbar (Single and Multi-selection) */}
+      {selectedStickerElements.length > 0 && (
+        <StickerFormattingToolbar
+          selectedElements={selectedStickerElements}
+          primaryElement={primarySelectedElement}
+          onLiveUpdate={(liveMap) => {
+            if (onUpdateMultipleLive) onUpdateMultipleLive(liveMap);
+          }}
+          onCommitChange={(commitMap) => {
+            if (onCommitMultipleChange) onCommitMultipleChange(commitMap);
+          }}
+          onClose={() => handleSelectElement(null)}
+        />
+      )}
 
       {/* Hidden File Input */}
       <input
@@ -875,54 +916,7 @@ export default function WorkspaceCanvas({
       </div>
       </div>
 
-      {/* Contextual Image Editing Toolbar (Single and Multi-selection) */}
-      {selectedImageElements.length > 0 && (
-        <ImageEditingToolbar
-          selectedElements={selectedImageElements}
-          primaryElement={primarySelectedElement}
-          assetMap={assetMap}
-          onLiveUpdate={(liveMap) => {
-            if (onUpdateMultipleLive) onUpdateMultipleLive(liveMap);
-          }}
-          onCommitChange={(commitMap) => {
-            if (onCommitMultipleChange) onCommitMultipleChange(commitMap);
-            else if (onCommitCell && selectedCellId && commitMap[selectedCellId]) {
-              onCommitCell(selectedCellId, commitMap[selectedCellId]);
-            }
-          }}
-          onClose={() => handleSelectElement(null)}
-          onOpenCropModal={onOpenCropModal}
-          onReplaceAsset={onReplaceAsset}
-          onRemoveAsset={onRemoveCellAsset}
-        />
-      )}
-      {selectedShapeElements.length > 0 && (
-        <ShapeFormattingToolbar
-          selectedElements={selectedShapeElements}
-          primaryElement={primarySelectedElement}
-          onLiveUpdate={(liveMap) => {
-            if (onUpdateMultipleLive) onUpdateMultipleLive(liveMap);
-          }}
-          onCommitChange={(commitMap) => {
-            if (onCommitMultipleChange) onCommitMultipleChange(commitMap);
-          }}
-          onClose={() => handleSelectElement(null)}
-        />
-      )}
-      {/* Contextual Sticker Formatting Toolbar (Single and Multi-selection) */}
-      {selectedStickerElements.length > 0 && (
-        <StickerFormattingToolbar
-          selectedElements={selectedStickerElements}
-          primaryElement={primarySelectedElement}
-          onLiveUpdate={(liveMap) => {
-            if (onUpdateMultipleLive) onUpdateMultipleLive(liveMap);
-          }}
-          onCommitChange={(commitMap) => {
-            if (onCommitMultipleChange) onCommitMultipleChange(commitMap);
-          }}
-          onClose={() => handleSelectElement(null)}
-        />
-      )}
+
     </main>
   );
 }
