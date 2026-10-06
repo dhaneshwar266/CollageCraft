@@ -1,568 +1,420 @@
-import { getImageFilterStyle } from './imageUtils';
-import { getShapeSvgPath, normalizeShapeElement } from './shapeUtils';
-import { normalizeStickerElement } from './stickerUtils';
-import { ASPECT_RATIOS, LAYOUT_PRESETS, getAutoGridLayout } from './layoutTemplates';
-import { isElementHidden } from './groupUtils';
-import { normalizeTextElement, getTextTransformedValue } from './textUtils';
+import React, { useState, useEffect, useRef } from 'react';
+import { getImageFilterStyle, getImageTransformStyle, clampImagePan } from '../../utils/imageUtils';
+import { RotateCw, Maximize2 } from 'lucide-react';
+import { getElementBounds } from '../../utils/selectionGeometry';
+import { getSnapTargets, calculateSnapDelta } from '../../utils/snapping';
 
-/**
- * Loads an HTMLImageElement asynchronously from a URL or Data URI
- */
-export function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = (err) => reject(err);
-    img.src = src;
+export default function FreestyleCanvasView({
+  state,
+  document,
+  containerRef,
+  setSnapGuides,
+  selectedCellId,
+  onSelectCell,
+  onToggleSelection,
+  onUpdateCell,
+  onCommitCell,
+}) {
+  const { cells, assets, frameSettings } = state;
+  const { cornerRadius = 16, cellShadow = true } = frameSettings;
+
+  const [dragState, setDragState] = useState(null);
+  const snapStateRef = useRef({});
+
+  // Escape key cancel during drag
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && dragState) {
+        if (setSnapGuides) setSnapGuides([]);
+        snapStateRef.current = {};
+        setDragState(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [dragState, setSnapGuides]);
+
+  // Global window event listener when dragging in Freestyle mode
+  useEffect(() => {
+    if (!dragState) return;
+
+    const handleWindowMouseMove = (e) => {
+      const rect = containerRef?.current?.getBoundingClientRect();
+      const vpZoom = 1;
+
+      const screenDeltaX = e.clientX - dragState.startX;
+      const screenDeltaY = e.clientY - dragState.startY;
+
+      const canvasDeltaX = screenDeltaX / vpZoom;
+      const canvasDeltaY = screenDeltaY / vpZoom;
+
+      const canvasWidth = Math.max(50, (rect?.width || 800) / vpZoom);
+      const canvasHeight = Math.max(50, (rect?.height || 600) / vpZoom);
+
+      const rawDeltaX = (canvasDeltaX / canvasWidth) * 100;
+      const rawDeltaY = (canvasDeltaY / canvasHeight) * 100;
+
+      if (dragState.action === 'in-cell-pan') {
+        const deltaX = Math.round(canvasDeltaX);
+        const deltaY = Math.round(canvasDeltaY);
+
+        const rawPanX = dragState.initialPanX + deltaX;
+        const rawPanY = dragState.initialPanY + deltaY;
+
+        const { panX: newPanX, panY: newPanY } = clampImagePan(
+          rawPanX,
+          rawPanY,
+          dragState.cellW,
+          dragState.cellH,
+          dragState.zoom,
+          dragState.asset
+        );
+
+        setDragState((prev) => (prev ? { ...prev, currentPanX: newPanX, currentPanY: newPanY } : null));
+        onUpdateCell(dragState.cellId, { panX: newPanX, panY: newPanY });
+      } else if (dragState.action === 'move') {
+        const MIN_W = dragState.initialW || 35;
+        const MIN_H = dragState.initialH || 35;
+        const rawX = Math.max(0, Math.min(100 - MIN_W, dragState.initialX + rawDeltaX));
+        const rawY = Math.max(0, Math.min(100 - MIN_H, dragState.initialY + rawDeltaY));
+
+        const trialBounds = getElementBounds({
+          type: 'image',
+          freeX: rawX,
+          freeY: rawY,
+          freeW: dragState.initialW,
+          freeH: dragState.initialH,
+          rotation: dragState.initialRot,
+        });
+
+        const targets = getSnapTargets(document?.elements, [dragState.cellId], rect, document?.guides || []);
+        const snapRes = calculateSnapDelta(trialBounds, targets, rect, snapStateRef.current);
+        snapStateRef.current = snapRes.activeSnapState;
+        if (setSnapGuides) setSnapGuides(snapRes.guides);
+
+        const finalX = Math.max(0, Math.min(100 - MIN_W, rawX + snapRes.snapDeltaX));
+        const finalY = Math.max(0, Math.min(100 - MIN_H, rawY + snapRes.snapDeltaY));
+
+        setDragState((prev) => (prev ? { ...prev, currentX: finalX, currentY: finalY } : null));
+        onUpdateCell(dragState.cellId, { freeX: finalX, freeY: finalY });
+      } else if (dragState.action === 'resize') {
+        if (setSnapGuides) setSnapGuides([]);
+        const MIN_W = 5;
+        const MIN_H = 5;
+        const round2 = (val) => Math.round(val * 100) / 100;
+        const newW = round2(Math.max(MIN_W, Math.min(100 - dragState.initialX, dragState.initialW + rawDeltaX)));
+        const newH = round2(Math.max(MIN_H, Math.min(100 - dragState.initialY, dragState.initialH + rawDeltaY)));
+        setDragState((prev) => (prev ? { ...prev, currentW: newW, currentH: newH } : null));
+        onUpdateCell(dragState.cellId, { freeW: newW, freeH: newH });
+      } else if (dragState.action === 'rotate') {
+        if (setSnapGuides) setSnapGuides([]);
+        const newRot = (dragState.initialRot + rawDeltaX * 2) % 360;
+        setDragState((prev) => (prev ? { ...prev, currentRot: newRot } : null));
+        onUpdateCell(dragState.cellId, { rotation: newRot });
+      }
+    };
+
+    const handleWindowMouseUp = () => {
+      if (dragState) {
+        if (dragState.action === 'in-cell-pan') {
+          onCommitCell(dragState.cellId, {
+            panX: dragState.currentPanX ?? dragState.initialPanX,
+            panY: dragState.currentPanY ?? dragState.initialPanY,
+          });
+        } else if (dragState.action === 'move') {
+          onCommitCell(dragState.cellId, {
+            freeX: dragState.currentX ?? dragState.initialX,
+            freeY: dragState.currentY ?? dragState.initialY,
+          });
+        } else if (dragState.action === 'resize') {
+          onCommitCell(dragState.cellId, {
+            freeW: dragState.currentW ?? dragState.initialW,
+            freeH: dragState.currentH ?? dragState.initialH,
+          });
+        } else if (dragState.action === 'rotate') {
+          onCommitCell(dragState.cellId, {
+            rotation: dragState.currentRot ?? dragState.initialRot,
+          });
+        }
+        if (setSnapGuides) setSnapGuides([]);
+        snapStateRef.current = {};
+        setDragState(null);
+      }
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [dragState, onUpdateCell, onCommitCell, containerRef, setSnapGuides, document, state]);
+
+  const activePointersRef = useRef(new Map());
+  const pinchStateRef = useRef({
+    active: false,
+    cellId: null,
+    startDistance: 0,
+    startZoom: 1,
+    currentZoom: 1,
   });
-}
 
-/**
- * Renders the entire collage onto an offscreen canvas and returns the canvas object
- */
-export async function renderCollageToCanvas(state, scaleMultiplier = 1) {
-  const {
-    aspectRatio = '1:1',
-    layoutId = 'side-by-side',
-    frameSettings = {},
-    backgroundSettings = {},
-    cells = [],
-    assets = [],
-    textOverlays = [],
-    stickers = [],
-    freestylePositions = {},
-  } = state;
-
-  const aspectSpec = ASPECT_RATIOS.find((a) => a.id === aspectRatio) || ASPECT_RATIOS[0];
-  const targetWidth = aspectSpec.width * scaleMultiplier;
-  const targetHeight = aspectSpec.height * scaleMultiplier;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
-  const ctx = canvas.getContext('2d');
-
-  if (!ctx) throw new Error('Canvas 2D context not available');
-
-  const {
-    padding = 16,
-    gap = 12,
-    cornerRadius = 16,
-    cellShadow = false,
-  } = frameSettings;
-
-  // Scale frame settings to export resolution
-  const scaledPadding = (padding / 100) * Math.min(targetWidth, targetHeight);
-  const scaledGap = (gap / 100) * Math.min(targetWidth, targetHeight) * 0.5;
-  const scaledRadius = (cornerRadius / 100) * Math.min(targetWidth, targetHeight) * 0.2;
-
-  // 1. RENDER BACKGROUND
-  ctx.save();
-  if (backgroundSettings.type === 'color') {
-    ctx.fillStyle = backgroundSettings.value || '#0f172a';
-    ctx.fillRect(0, 0, targetWidth, targetHeight);
-  } else if (backgroundSettings.type === 'gradient') {
-    const grad = ctx.createLinearGradient(0, 0, targetWidth, targetHeight);
-    const stops = backgroundSettings.stops || ['#4f46e5', '#9333ea'];
-    stops.forEach((stop, idx) => {
-      grad.addColorStop(idx / (stops.length - 1), stop);
-    });
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, targetWidth, targetHeight);
-  } else if (backgroundSettings.type === 'blur' && backgroundSettings.blurAssetUrl) {
-    try {
-      const bgImg = await loadImage(backgroundSettings.blurAssetUrl);
-      ctx.save();
-      ctx.filter = 'blur(30px) brightness(0.6)';
-      // Draw image scaled to cover canvas
-      const bgRatio = bgImg.width / bgImg.height;
-      const canvasRatio = targetWidth / targetHeight;
-      let drawW, drawH, drawX, drawY;
-      if (bgRatio > canvasRatio) {
-        drawH = targetHeight;
-        drawW = targetHeight * bgRatio;
-        drawX = (targetWidth - drawW) / 2;
-        drawY = 0;
-      } else {
-        drawW = targetWidth;
-        drawH = targetWidth / bgRatio;
-        drawX = 0;
-        drawY = (targetHeight - drawH) / 2;
-      }
-      ctx.drawImage(bgImg, drawX - 40, drawY - 40, drawW + 80, drawH + 80);
-      ctx.restore();
-    } catch {
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, targetWidth, targetHeight);
+  const handleMouseDownCard = (e, cell, action = 'move') => {
+    if (activePointersRef.current.size >= 2 || pinchStateRef.current.active) {
+      console.warn('[PINCH BLOCKED DRAG]', { action });
+      return;
     }
-  }
-  ctx.restore();
 
-  // Calculate inner workspace rectangle after outer padding
-  const innerX = scaledPadding;
-  const innerY = scaledPadding;
-  const innerW = Math.max(10, targetWidth - scaledPadding * 2);
-  const innerH = Math.max(10, targetHeight - scaledPadding * 2);
+    e.stopPropagation();
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      if (onToggleSelection) onToggleSelection(cell.id);
+      return;
+    }
+    onSelectCell(cell.id);
 
-  // Pre-load asset images map
-  const loadedImagesMap = new Map();
-  await Promise.all(
-    assets.map(async (asset) => {
-      try {
-        const img = await loadImage(asset.url);
-        loadedImagesMap.set(asset.id, img);
-      } catch (err) {
-        console.warn(`Could not load asset ${asset.id}`, err);
-      }
-    })
-  );
+    // If locked, block drag, resize, or rotate transformations
+    if (cell.locked) return;
 
-  // 2. RENDER PHOTO CELLS
-  if (layoutId === 'freestyle') {
-    // RENDER FREESTYLE / SCRAPBOOK MODE
-    for (let i = 0; i < cells.length; i++) {
-      const cell = cells[i];
-      if (isElementHidden(state.document?.elements, cell)) continue;
-      const asset = assets.find((a) => a.id === cell.assetId);
-      const img = asset ? loadedImagesMap.get(asset.id) : null;
-      if (!img) continue;
+    const isZoomed = (cell.zoom || 1) > 1.05;
+    const effectiveAction = (isZoomed && action === 'move') ? 'in-cell-pan' : action;
 
-      const freePos = freestylePositions[cell.id] || {
-        x: 10 + (i * 15) % 60,
-        y: 10 + (i * 15) % 60,
-        width: 35,
-        height: 35,
-        rotation: (i % 2 === 0 ? 1 : -1) * (i * 4 + 3),
+    const rect = containerRef?.current?.getBoundingClientRect();
+    const cellW = (rect?.width || 800) * ((cell.freeW ?? 38) / 100);
+    const cellH = (rect?.height || 600) * ((cell.freeH ?? 38) / 100);
+    const asset = assets.find((a) => a.id === cell.assetId);
+
+    setDragState({
+      cellId: cell.id,
+      action: effectiveAction, // 'move' | 'resize' | 'rotate' | 'in-cell-pan'
+      startX: e.clientX,
+      startY: e.clientY,
+      cellW,
+      cellH,
+      asset,
+      zoom: cell.zoom || 1,
+      initialX: cell.freeX ?? 10,
+      initialY: cell.freeY ?? 10,
+      initialW: cell.freeW ?? 35,
+      initialH: cell.freeH ?? 35,
+      initialRot: cell.rotation || 0,
+      initialPanX: cell.panX || 0,
+      initialPanY: cell.panY || 0,
+      currentPanX: cell.panX || 0,
+      currentPanY: cell.panY || 0,
+    });
+  };
+
+  // POINTER PINCH ZOOM HANDLERS FOR FREESTYLE
+  const handlePointerDownCard = (e, cell) => {
+    activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointersRef.current.size >= 2) {
+      const points = Array.from(activePointersRef.current.values());
+      const dist = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+
+      setDragState(null);
+
+      pinchStateRef.current = {
+        active: true,
+        cellId: cell.id,
+        startDistance: dist,
+        startZoom: cell.zoom || 1.0,
+        currentZoom: cell.zoom || 1.0,
       };
 
-      const cellX = innerX + (freePos.x / 100) * innerW;
-      const cellY = innerY + (freePos.y / 100) * innerH;
-      const cellW = (freePos.width / 100) * innerW;
-      const cellH = (freePos.height / 100) * innerH;
+      console.log('[PINCH START FREESTYLE]', {
+        pointerCount: activePointersRef.current.size,
+        cellId: cell.id,
+        distance: dist,
+        zoom: cell.zoom || 1.0,
+      });
 
-      ctx.save();
-      ctx.translate(cellX + cellW / 2, cellY + cellH / 2);
-      ctx.rotate((freePos.rotation * Math.PI) / 180);
-
-      // Cell Shadow
-      if (cellShadow) {
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-        ctx.shadowBlur = 20 * scaleMultiplier;
-        ctx.shadowOffsetY = 10 * scaleMultiplier;
-      }
-
-      // Cell opacity & blend mode
-      ctx.globalAlpha = cell.opacity ?? 1;
-      if (cell.blendMode && cell.blendMode !== 'normal') {
-        ctx.globalCompositeOperation = cell.blendMode;
-      }
-
-      // Draw rounded clipped box
-      ctx.beginPath();
-      const radiusVal = cell.borderRadius ?? cornerRadius;
-      const r = Math.min((radiusVal / 100) * Math.min(cellW, cellH), cellW / 2, cellH / 2);
-      const halfW = cellW / 2;
-      const halfH = cellH / 2;
-      ctx.roundRect(-halfW, -halfH, cellW, cellH, r);
-      ctx.fillStyle = '#1e293b';
-      ctx.fill();
-      ctx.clip();
-
-      // Filter
-      ctx.filter = getImageFilterStyle(cell);
-
-      // Fit/Fill inside cell frame
-      const zoom = cell.zoom || 1;
-      const panX = ((cell.panX || 0) / 100) * cellW;
-      const panY = ((cell.panY || 0) / 100) * cellH;
-
-      drawSingleCellImage(ctx, img, -halfW, -halfH, cellW, cellH, zoom, panX, panY, cell);
-
-      ctx.restore();
+      e.preventDefault();
+      e.stopPropagation();
     }
-  } else {
-    // RENDER GRID LAYOUT
-    let preset = LAYOUT_PRESETS.find((p) => p.id === layoutId);
-    let cellSpecs = preset ? preset.cells : getAutoGridLayout(cells.length);
+  };
 
-    for (let i = 0; i < cells.length; i++) {
-      const cell = cells[i];
-      if (isElementHidden(state.document?.elements, cell)) continue;
-      const spec = cell?.specOverride || cellSpecs[i] || { x: 0, y: 0, width: 100, height: 100 };
-      const asset = assets.find((a) => a.id === cell.assetId);
-      const img = asset ? loadedImagesMap.get(asset.id) : null;
-
-      // Calculate cell dimensions with inner gap offset
-      const halfGap = scaledGap / 2;
-      const rawCellX = innerX + (spec.x / 100) * innerW;
-      const rawCellY = innerY + (spec.y / 100) * innerH;
-      const rawCellW = (spec.width / 100) * innerW;
-      const rawCellH = (spec.height / 100) * innerH;
-
-      const cellX = rawCellX + halfGap;
-      const cellY = rawCellY + halfGap;
-      const cellW = Math.max(10, rawCellW - scaledGap);
-      const cellH = Math.max(10, rawCellH - scaledGap);
-
-      ctx.save();
-
-      // Cell opacity & blend mode
-      ctx.globalAlpha = cell.opacity ?? 1;
-      if (cell.blendMode && cell.blendMode !== 'normal') {
-        ctx.globalCompositeOperation = cell.blendMode;
-      }
-
-      if (cellShadow) {
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-        ctx.shadowBlur = 15 * scaleMultiplier;
-        ctx.shadowOffsetY = 6 * scaleMultiplier;
-      }
-
-      // Draw cell rounded rect
-      const radiusVal = cell.borderRadius ?? cornerRadius;
-      const r = Math.min((radiusVal / 100) * Math.min(cellW, cellH), cellW / 2, cellH / 2);
-      ctx.beginPath();
-      ctx.roundRect(cellX, cellY, cellW, cellH, r);
-      ctx.fillStyle = '#1e293b';
-      ctx.fill();
-
-      // Clip inside cell
-      ctx.clip();
-
-      if (img) {
-        ctx.filter = getImageFilterStyle(cell);
-
-        const zoom = cell.zoom || 1;
-        const panX = (cell.panX || 0) * scaleMultiplier;
-        const panY = (cell.panY || 0) * scaleMultiplier;
-
-        drawSingleCellImage(ctx, img, cellX, cellY, cellW, cellH, zoom, panX, panY, cell);
-      }
-
-      ctx.restore();
-    }
-  }
-
-  // 3. RENDER TEXT OVERLAYS
-  for (const rawTxt of textOverlays) {
-    if (isElementHidden(state.document?.elements, rawTxt)) continue;
-    const txt = normalizeTextElement(rawTxt);
-    ctx.save();
-
-    const txtX = (txt.x / 100) * targetWidth;
-    const txtY = (txt.y / 100) * targetHeight;
-
-    ctx.translate(txtX, txtY);
-    if (txt.rotation) ctx.rotate((txt.rotation * Math.PI) / 180);
-
-    const fontPx = (txt.fontSize || 48) * scaleMultiplier;
-    ctx.font = `${txt.fontStyle || 'normal'} ${txt.fontWeight || 400} ${fontPx}px ${txt.fontFamily || 'Inter'}, sans-serif`;
-    ctx.textAlign = txt.textAlign || 'center';
-    ctx.textBaseline = 'middle';
-
-    const displayVal = getTextTransformedValue(txt.text || '', txt.textTransform);
-    const lines = (displayVal || '').split('\n');
-
-    const lineHeightPx = fontPx * (txt.lineHeight || 1.2);
-    const totalH = lines.length * lineHeightPx;
-
-    // Measure maximum line width
-    let maxLineW = 0;
-    lines.forEach((line) => {
-      const metrics = ctx.measureText(line);
-      maxLineW = Math.max(maxLineW, metrics.width);
-    });
-
-    const paddingPx = (txt.padding || 0) * scaleMultiplier;
-    const radiusPx = (txt.borderRadius || 0) * scaleMultiplier;
-    const boxW = maxLineW + paddingPx * 2;
-    const boxH = totalH + paddingPx * 2;
-
-    // Render Background Box/Pill
-    if (txt.backgroundColor && txt.backgroundColor !== 'transparent') {
-      ctx.save();
-      ctx.fillStyle = txt.backgroundColor;
-      ctx.globalAlpha = txt.backgroundOpacity ?? 1;
-      ctx.beginPath();
-      ctx.roundRect(-boxW / 2, -boxH / 2, boxW, boxH, radiusPx);
-      ctx.fill();
-
-      // Border
-      if (txt.borderWidth > 0) {
-        ctx.lineWidth = txt.borderWidth * scaleMultiplier;
-        ctx.strokeStyle = txt.borderColor || '#000000';
-        ctx.stroke();
-      }
-      ctx.restore();
+  const handlePointerMoveCard = (e, cell) => {
+    if (activePointersRef.current.has(e.pointerId)) {
+      activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     }
 
-    // Shadow
-    if (txt.shadow?.enabled) {
-      ctx.shadowColor = txt.shadow.color || '#000000';
-      ctx.shadowBlur = (txt.shadow.blur || 4) * scaleMultiplier;
-      ctx.shadowOffsetX = (txt.shadow.offsetX || 0) * scaleMultiplier;
-      ctx.shadowOffsetY = (txt.shadow.offsetY || 2) * scaleMultiplier;
+    if (pinchStateRef.current.active && activePointersRef.current.size >= 2 && pinchStateRef.current.cellId === cell.id) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const points = Array.from(activePointersRef.current.values());
+      const dist = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+      const startDist = pinchStateRef.current.startDistance;
+
+      if (!startDist || startDist <= 0) return;
+
+      const scale = dist / startDist;
+      const rawNextZoom = pinchStateRef.current.startZoom * scale;
+      const nextZoom = Math.max(0.5, Math.min(5, Math.round(rawNextZoom * 100) / 100));
+
+      pinchStateRef.current.currentZoom = nextZoom;
+
+      console.log('[PINCH MOVE FREESTYLE]', {
+        pointerCount: activePointersRef.current.size,
+        distance: dist,
+        startDistance: startDist,
+        zoom: nextZoom,
+      });
+
+      onUpdateCell(cell.id, { zoom: nextZoom });
     }
+  };
 
-    // Draw lines
-    lines.forEach((line, idx) => {
-      const lineY = -totalH / 2 + lineHeightPx / 2 + idx * lineHeightPx;
-      let lineX = 0;
-      if (txt.textAlign === 'left') lineX = -maxLineW / 2;
-      if (txt.textAlign === 'right') lineX = maxLineW / 2;
+  const handlePointerUpCard = (e, cell) => {
+    activePointersRef.current.delete(e.pointerId);
 
-      // Outline Stroke
-      if (txt.outline?.enabled && txt.outline.width > 0) {
-        ctx.strokeStyle = txt.outline.color || '#000000';
-        ctx.lineWidth = txt.outline.width * scaleMultiplier * 2;
-        ctx.strokeText(line, lineX, lineY);
-      }
+    if (pinchStateRef.current.active && activePointersRef.current.size < 2) {
+      const finalZoom = pinchStateRef.current.currentZoom;
+      console.log('[PINCH END FREESTYLE]', { cellId: cell.id, finalZoom });
 
-      // Fill Text
-      ctx.fillStyle = txt.color || '#ffffff';
-      ctx.fillText(line, lineX, lineY);
-
-      // Underline / Strikethrough
-      if (txt.textDecoration && txt.textDecoration !== 'none') {
-        const lineW = ctx.measureText(line).width;
-        let decX = lineX;
-        if (txt.textAlign === 'center') decX = -lineW / 2;
-        if (txt.textAlign === 'right') decX = maxLineW / 2 - lineW;
-
-        ctx.strokeStyle = txt.color || '#ffffff';
-        ctx.lineWidth = Math.max(1, fontPx * 0.06);
-        ctx.beginPath();
-        if (txt.textDecoration === 'underline') {
-          ctx.moveTo(decX, lineY + fontPx * 0.35);
-          ctx.lineTo(decX + lineW, lineY + fontPx * 0.35);
-        } else if (txt.textDecoration === 'line-through') {
-          ctx.moveTo(decX, lineY);
-          ctx.lineTo(decX + lineW, lineY);
-        }
-        ctx.stroke();
-      }
-    });
-
-    ctx.restore();
-  }
-
-  // 4. RENDER STICKER & ICON OVERLAYS
-  const stickerElements = (state.document?.elements || []).filter((el) => el.type === 'sticker');
-  for (const rawSticker of stickerElements) {
-    if (isElementHidden(state.document?.elements, rawSticker)) continue;
-    const st = normalizeStickerElement(rawSticker);
-    ctx.save();
-
-    const stX = (st.x / 100) * targetWidth;
-    const stY = (st.y / 100) * targetHeight;
-    const stW = (st.width || 64) * scaleMultiplier;
-    const stH = (st.height || 64) * scaleMultiplier;
-
-    ctx.translate(stX, stY);
-    if (st.rotation) ctx.rotate((st.rotation * Math.PI) / 180);
-    if (st.flipH || st.flipV) {
-      ctx.scale(st.flipH ? -1 : 1, st.flipV ? -1 : 1);
+      pinchStateRef.current.active = false;
+      onCommitCell(cell.id, { zoom: finalZoom });
+      setDragState(null);
     }
+  };
 
-    ctx.globalAlpha = st.opacity ?? 1;
-    if (st.blendMode && st.blendMode !== 'normal') {
-      ctx.globalCompositeOperation = st.blendMode;
+  // Touch double-tap tracking ref
+  const lastTapRef = useRef({});
+
+  // DOUBLE-CLICK / DOUBLE-TAP: Reset Image View Transform
+  const handleDoubleClickCard = (e, cell) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setDragState(null);
+    if (onCommitCell) {
+      onCommitCell(cell.id, {
+        zoom: 1,
+        panX: 0,
+        panY: 0,
+        rotation: 0,
+        flipH: false,
+        flipV: false,
+      });
     }
+  };
 
-    // Shadow
-    if (st.shadow?.enabled) {
-      ctx.shadowColor = st.shadow.color || '#000000';
-      ctx.shadowBlur = (st.shadow.blur || 4) * scaleMultiplier;
-      ctx.shadowOffsetX = (st.shadow.offsetX || 0) * scaleMultiplier;
-      ctx.shadowOffsetY = (st.shadow.offsetY || 2) * scaleMultiplier;
+  const handleTouchStartCard = (e, cell) => {
+    const now = Date.now();
+    const lastTap = lastTapRef.current[cell.id] || 0;
+    if (now - lastTap < 300) {
+      e.stopPropagation();
+      handleDoubleClickCard(e, cell);
+      lastTapRef.current[cell.id] = 0;
+    } else {
+      lastTapRef.current[cell.id] = now;
     }
+  };
 
-    if (st.stickerSource === 'emoji') {
-      const stSize = Math.min(stW, stH);
-      ctx.font = `${stSize}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(st.content || st.emoji || '✨', 0, 0);
-    } else if (st.content && st.content.startsWith('M')) {
-      // SVG path vector drawing
-      const path2d = new Path2D(st.content);
-      ctx.translate(-stW / 2, -stH / 2);
-      ctx.scale(stW / 24, stH / 24);
+  return (
+    <div className="w-full h-full relative overflow-hidden">
+      {cells.map((cell, index) => {
+        if (cell.visible === false) return null;
+        const asset = assets.find((a) => a.id === cell.assetId);
+        if (!asset) return null;
 
-      if (st.fill && st.fill !== 'transparent' && st.fill !== 'none') {
-        ctx.fillStyle = st.fill;
-        ctx.fill(path2d);
-      }
+        const isSelected = selectedCellId === cell.id;
+        const isZoomed = (cell.zoom || 1) > 1.05;
+        const isSelectedAndZoomed = isSelected && isZoomed;
+        const isLocked = cell.locked === true;
+        const posX = cell.freeX ?? 10 + (index * 12) % 50;
+        const posY = cell.freeY ?? 10 + (index * 12) % 50;
+        const posW = cell.freeW ?? 38;
+        const posH = cell.freeH ?? 38;
+        const rot = cell.rotation ?? (index % 2 === 0 ? 1 : -1) * (index * 3 + 2);
 
-      if (st.strokeWidth > 0 && st.stroke && st.stroke !== 'none') {
-        ctx.lineWidth = st.strokeWidth;
-        ctx.strokeStyle = st.stroke;
-        ctx.stroke(path2d);
-      }
-    }
+        const filterCSS = getImageFilterStyle(cell);
 
-    ctx.restore();
-  }
+        return (
+          <div
+            key={cell.id}
+            data-testid={`image-cell-${cell.id}`}
+            data-element-id={cell.id}
+            onMouseDown={(e) => handleMouseDownCard(e, cell, 'move')}
+            onPointerDown={(e) => handlePointerDownCard(e, cell)}
+            onPointerMove={(e) => handlePointerMoveCard(e, cell)}
+            onPointerUp={(e) => handlePointerUpCard(e, cell)}
+            onPointerCancel={(e) => handlePointerUpCard(e, cell)}
+            onDoubleClick={(e) => handleDoubleClickCard(e, cell)}
+            onTouchStart={(e) => handleTouchStartCard(e, cell)}
+            className={`absolute group select-none ${
+              isLocked ? 'cursor-default' : isSelectedAndZoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-move'
+            } ${
+              isSelected ? 'ring-4 ring-[#c25e40] z-30 shadow-xl' : 'hover:ring-2 hover:ring-amber-500 z-10'
+            }`}
+            style={{
+              left: `${posX}%`,
+              top: `${posY}%`,
+              width: `${posW}%`,
+              height: `${posH}%`,
+              transform: `rotate(${rot}deg)`,
+              borderRadius: `${cell.borderRadius ?? cornerRadius}px`,
+              boxShadow: cellShadow ? '0 15px 35px rgba(0,0,0,0.3)' : 'none',
+              opacity: cell.opacity ?? 1,
+              backgroundColor: '#ffffff',
+              touchAction: 'none',
+              transition: 'none',
+              animation: 'none',
+            }}
+          >
+            <div
+              data-testid={`image-cell-content-${cell.id}`}
+              className="absolute inset-0 w-full h-full overflow-hidden rounded-[inherit] pointer-events-none"
+              style={{
+                width: '100%',
+                height: '100%',
+                transform: 'none',
+                transition: 'none',
+                animation: 'none',
+              }}
+            >
+              <img
+                data-testid={`image-element-${cell.id}`}
+                src={asset.url}
+                alt={asset.name}
+                draggable={false}
+                className={`absolute inset-0 w-full h-full pointer-events-none ${cell.objectFit === "contain" ? "object-contain" : "object-cover"}`}
+                style={{
+                  filter: filterCSS,
+                  transformOrigin: 'center center',
+                  transform: getImageTransformStyle(cell),
+                  transition: 'none',
+                  animation: 'none',
+                }}
+              />
+            </div>
 
-  // 5. RENDER VECTOR SHAPE ELEMENTS
-  const shapeElements = (state.document?.elements || []).filter((el) => el.type === 'shape');
-  for (const rawShape of shapeElements) {
-    if (isElementHidden(state.document?.elements, rawShape)) continue;
-    const shape = normalizeShapeElement(rawShape);
-    ctx.save();
+            {/* Selection Controls overlay */}
+            {isSelected && !isLocked && (
+              <>
+                {/* Rotate handle top right */}
+                <button
+                  onMouseDown={(e) => handleMouseDownCard(e, cell, 'rotate')}
+                  className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-[#c25e40] text-white flex items-center justify-center shadow-lg hover:scale-110 cursor-alias z-40"
+                  title="Drag to Rotate"
+                >
+                  <RotateCw className="w-4 h-4" />
+                </button>
 
-    const shapeX = (shape.x / 100) * targetWidth;
-    const shapeY = (shape.y / 100) * targetHeight;
-    const shapeW = (shape.width / 100) * targetWidth;
-    const shapeH = (shape.height / 100) * targetHeight;
-
-    ctx.translate(shapeX, shapeY);
-    if (shape.rotation) ctx.rotate((shape.rotation * Math.PI) / 180);
-    if (shape.flipH || shape.flipV) {
-      ctx.scale(shape.flipH ? -1 : 1, shape.flipV ? -1 : 1);
-    }
-
-    ctx.globalAlpha = shape.opacity ?? 1;
-    if (shape.blendMode && shape.blendMode !== 'normal') {
-      ctx.globalCompositeOperation = shape.blendMode;
-    }
-
-    // Shadow
-    if (shape.shadow?.enabled) {
-      ctx.shadowColor = shape.shadow.color || '#000000';
-      ctx.shadowBlur = (shape.shadow.blur || 4) * scaleMultiplier;
-      ctx.shadowOffsetX = (shape.shadow.offsetX || 0) * scaleMultiplier;
-      ctx.shadowOffsetY = (shape.shadow.offsetY || 3) * scaleMultiplier;
-    }
-
-    const svgPathD = getShapeSvgPath(shape.shapeType, shapeW, shapeH, {
-      cornerRadius: (shape.cornerRadius || 0) * scaleMultiplier,
-      sides: shape.sides,
-      innerRadius: shape.innerRadius,
-    });
-
-    const path2d = new Path2D(svgPathD);
-
-    // Fill
-    if (shape.fill && shape.fill.type !== 'transparent') {
-      if (typeof shape.fill === 'string') {
-        ctx.fillStyle = shape.fill;
-      } else if (shape.fill.type === 'solid') {
-        ctx.fillStyle = shape.fill.color || '#3b82f6';
-      } else if (shape.fill.gradient && shape.fill.type === 'linear') {
-        const angleRad = ((shape.fill.gradient.angle || 0) * Math.PI) / 180;
-        const grad = ctx.createLinearGradient(
-          0,
-          0,
-          Math.cos(angleRad) * shapeW,
-          Math.sin(angleRad) * shapeH
+                {/* Resize handle bottom right */}
+                <button
+                  onMouseDown={(e) => handleMouseDownCard(e, cell, 'resize')}
+                  className="absolute -bottom-3 -right-3 w-7 h-7 rounded-full bg-amber-700 text-white flex items-center justify-center shadow-lg hover:scale-110 cursor-nwse-resize z-40"
+                  title="Drag to Resize"
+                >
+                  <Maximize2 className="w-4 h-4" />
+                </button>
+              </>
+            )}
+          </div>
         );
-        (shape.fill.gradient.stops || []).forEach((s) => {
-          grad.addColorStop(s.offset, s.color);
-        });
-        ctx.fillStyle = grad;
-      } else if (shape.fill.gradient && shape.fill.type === 'radial') {
-        const grad = ctx.createRadialGradient(
-          shapeW / 2,
-          shapeH / 2,
-          0,
-          shapeW / 2,
-          shapeH / 2,
-          Math.max(shapeW, shapeH) / 2
-        );
-        (shape.fill.gradient.stops || []).forEach((s) => {
-          grad.addColorStop(s.offset, s.color);
-        });
-        ctx.fillStyle = grad;
-      }
-      ctx.fill(path2d);
-    }
-
-    // Stroke
-    if (shape.strokeWidth > 0) {
-      ctx.lineWidth = shape.strokeWidth * scaleMultiplier;
-      ctx.strokeStyle = shape.stroke || '#000000';
-      const sw = ctx.lineWidth;
-
-      if (shape.strokeStyle === 'dashed') {
-        ctx.setLineDash([sw * 4, sw * 2]);
-      } else if (shape.strokeStyle === 'dotted') {
-        ctx.setLineDash([sw, sw * 2]);
-      } else {
-        ctx.setLineDash([]);
-      }
-      ctx.stroke(path2d);
-    }
-
-    ctx.restore();
-  }
-
-  return canvas;
-}
-
-/**
- * Helper to draw image inside bounding box with object-fit cover, pan, zoom, rotation, and flips
- */
-function drawSingleCellImage(ctx, img, cellX, cellY, cellW, cellH, zoom, panX, panY, cell = {}) {
-  ctx.save();
-
-  const rotation = cell.rotation || 0;
-  const flipH = cell.flipH || false;
-  const flipV = cell.flipV || false;
-
-  // Move origin to center of cell box
-  const centerX = cellX + cellW / 2;
-  const centerY = cellY + cellH / 2;
-  ctx.translate(centerX + panX, centerY + panY);
-
-  if (rotation) {
-    ctx.rotate((rotation * Math.PI) / 180);
-  }
-
-  const scaleX = flipH ? -1 : 1;
-  const scaleY = flipV ? -1 : 1;
-  ctx.scale(scaleX, scaleY);
-
-  // Crop clipping box if crop enabled
-  if (cell.crop?.enabled) {
-    const cropX = ((cell.crop.x || 0) / 100 - 0.5) * cellW;
-    const cropY = ((cell.crop.y || 0) / 100 - 0.5) * cellH;
-    const cropW = ((cell.crop.width || 100) / 100) * cellW;
-    const cropH = ((cell.crop.height || 100) / 100) * cellH;
-
-    ctx.beginPath();
-    ctx.rect(cropX, cropY, cropW, cropH);
-    ctx.clip();
-  }
-
-  // Compute cover dimensions
-  const imgRatio = img.width / img.height;
-  const cellRatio = cellW / cellH;
-
-  let renderW, renderH;
-  if (imgRatio > cellRatio) {
-    renderH = cellH * zoom;
-    renderW = renderH * imgRatio;
-  } else {
-    renderW = cellW * zoom;
-    renderH = renderW / imgRatio;
-  }
-
-  ctx.drawImage(img, -renderW / 2, -renderH / 2, renderW, renderH);
-
-  // Draw Vignette if enabled
-  if (cell.vignette > 0) {
-    const maxRadius = Math.sqrt(Math.pow(cellW / 2, 2) + Math.pow(cellH / 2, 2));
-    const innerR = maxRadius * (1 - cell.vignette / 100);
-    const grad = ctx.createRadialGradient(0, 0, innerR, 0, 0, maxRadius);
-    const alpha = (cell.vignetteIntensity || 0.6) * (cell.vignette / 100);
-    grad.addColorStop(0, 'rgba(0,0,0,0)');
-    grad.addColorStop(1, `rgba(0,0,0,${alpha.toFixed(2)})`);
-
-    ctx.fillStyle = grad;
-    ctx.fillRect(-renderW / 2, -renderH / 2, renderW, renderH);
-  }
-
-  ctx.restore();
+      })}
+    </div>
+  );
 }
