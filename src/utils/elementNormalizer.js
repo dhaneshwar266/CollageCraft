@@ -45,6 +45,7 @@ export function createImageElement(assetId, cellData = {}, index = 0) {
 
     // Image-specific properties
     assetId: assetId,
+    objectFit: cellData.objectFit || "contain",
     zoom: cellData.zoom ?? 1,
     panX: cellData.panX ?? 0,
     panY: cellData.panY ?? 0,
@@ -307,6 +308,7 @@ export function getLegacyCells(document) {
       y: el.y ?? 0,
       width: el.width ?? 100,
       height: el.height ?? 100,
+      objectFit: el.objectFit || "contain",
       zoom: el.zoom ?? 1,
       panX: el.panX ?? 0,
       panY: el.panY ?? 0,
