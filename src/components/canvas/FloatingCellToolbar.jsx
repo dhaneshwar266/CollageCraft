@@ -16,7 +16,8 @@ import {
   RefreshCw,
   Trash2,
   Crop,
-  Lock
+  Lock,
+  Scaling
 } from 'lucide-react';
 import { FILTER_PRESETS } from '../../utils/filterPresets';
 
@@ -97,13 +98,20 @@ export default function FloatingCellToolbar({
     if (!file || !file.type.startsWith('image/')) return;
     const reader = new FileReader();
     reader.onload = (event) => {
-      if (onReplaceAsset) {
-        onReplaceAsset(cell.id, {
-          id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          name: file.name,
-          url: event.target.result,
-        });
-      }
+      const dataUrl = event.target.result;
+      const img = new Image();
+      img.onload = () => {
+        if (onReplaceAsset) {
+          onReplaceAsset(cell.id, {
+            id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            name: file.name,
+            url: dataUrl,
+            width: img.naturalWidth || img.width || 800,
+            height: img.naturalHeight || img.height || 800,
+          });
+        }
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -127,6 +135,25 @@ export default function FloatingCellToolbar({
 
         <div className="flex items-center gap-1">
           {/* Crop Modal Button */}
+          
+          {/* Fit / Fill Mode Toggle */}
+          <button
+            onClick={() => {
+              const nextFit = cell.objectFit === "contain" ? "cover" : "contain";
+              onCommitCell(cell.id, { objectFit: nextFit, zoom: 1, panX: 0, panY: 0 });
+            }}
+            title={cell.objectFit === "contain" ? "Switch to Fill Cell (Crop to Fit)" : "Switch to Fit Original (Full Photo)"}
+            className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all ${
+              cell.objectFit === "contain"
+                ? "bg-[#c25e40] text-white shadow-xs"
+                : "bg-stone-100 text-stone-700 hover:bg-stone-200"
+            }`}
+          >
+            <Scaling className="w-3.5 h-3.5" />
+            <span>{cell.objectFit === "contain" ? "Fit (Full)" : "Fill (Crop)"}</span>
+          </button>
+
+
           {onOpenCropModal && (
             <button
               onClick={() => onOpenCropModal(cell, asset)}
@@ -271,7 +298,7 @@ export default function FloatingCellToolbar({
         <ZoomOut className="w-3.5 h-3.5 text-stone-400 shrink-0" />
         <input
           type="range"
-          min="1"
+          min="0.2"
           max="3.5"
           step="0.05"
           value={cell.zoom || 1}
